@@ -8,6 +8,8 @@ The grades page objective is to show the grades of the students in a table forma
 
 Same general interactivity as the attendancePage. Students names can be modified by clicking on them and introducing the new name. The user can click on the "+" button to add a new activity, the newActivityOverlay will appear (newActivityOverlay.png for a better understanding). The user can click on the "+ Evaluacion" button to add a new evaluation, the newEvaluationOverlay will appear (newEvaluationOverlay.png for a better understanding). As the attendancePage, the user clicks on a cell to modify the grade of the student, and the system will move to the next cell in a cascading manner. Above the "Attendance" and "Grades" buttons there are a n amount of buttons (depending on the ammount of midterms indicated in the University's settings). Clicking on one of them will move the system to the corresponding midtermPage with its corresponding grades.
 
+The student list, by default, is ordered alphabetically, but the user can click and drag a student to reorder said student. Hoover will allow the user to see more clearly the student's name and grade. When hoovering over the name cell, the system will enlarge the whole row of the student, so the user can see the student's name and grade more clearly, this will also be the case for the columns, so the user can see and identify easily the activity or attendance data. Finally, when the user hoovers over a cell, the system will enlarge the row and column of the cell, so the user can identify specifically the data of that particular cell.
+
 ## Logic
 
 This page will provide the teacher with the ability to add activities and evaluations to the students. Lets make an example:
