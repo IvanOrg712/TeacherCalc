@@ -7,7 +7,7 @@
 
 .login-visual {
     flex: 1;
-    background: linear-gradient(135deg, var(--primary-color), #4338ca);
+    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
     position: relative;
     display: flex;
     align-items: center;
@@ -20,7 +20,7 @@
     position: absolute;
     width: 150%;
     height: 150%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
+    background: radial-gradient(circle, rgba(0, 0, 0, 0.03) 0%, transparent 60%);
     top: -25%;
     left: -25%;
     animation: pulse 10s infinite alternate;
@@ -97,7 +97,7 @@
 .input-group input {
     padding: 0.75rem 1rem;
     border-radius: 8px;
-    border: 1px solid var(--surface-color);
+    border: 1px solid var(--border-color);
     background-color: var(--surface-color);
     color: var(--text-primary);
     font-size: 1rem;
@@ -107,7 +107,7 @@
 .input-group input:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
 }
 
 .login-btn {

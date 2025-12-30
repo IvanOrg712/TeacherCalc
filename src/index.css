@@ -1,26 +1,27 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Premium Dark Theme Palette */
-  --bg-color: #0f172a;
-  /* Slate 900 */
-  --surface-color: #1e293b;
-  /* Slate 800 */
-  --text-primary: #f8fafc;
-  /* Slate 50 */
-  --text-secondary: #94a3b8;
-  /* Slate 400 */
+  /* Professional Black & White Palette */
+  --bg-color: #ffffff;
+  --surface-color: #f9fafb;
+  /* Gray 50 */
+  --text-primary: #111827;
+  /* Gray 900 */
+  --text-secondary: #6b7280;
+  /* Gray 500 */
+  --border-color: #e5e7eb;
+  /* Gray 200 */
 
-  --primary-color: #6366f1;
-  /* Indigo 500 */
-  --primary-hover: #4f46e5;
-  /* Indigo 600 */
-  --accent-color: #818cf8;
-  /* Indigo 400 */
+  --primary-color: #000000;
+  /* Black */
+  --primary-hover: #374151;
+  /* Gray 700 */
+  --accent-color: #9ca3af;
+  /* Gray 400 */
 
-  --glass-bg: rgba(30, 41, 59, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
 
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
   --transition-fast: 0.2s ease;
