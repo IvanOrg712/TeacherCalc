@@ -1,0 +1,58 @@
+.class-card {
+    background-color: #d1d5db;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* Removed cursor: pointer from main card since interactive elements are inside */
+    transition: background-color var(--transition-fast);
+    border-radius: 2px;
+    min-height: 64px;
+    /* Ensure consistent height */
+}
+
+/* Removed hover transform on card itself to focus interaction on badges */
+.class-card:hover {
+    background-color: #cbd5e1;
+    /* Slight highlight */
+}
+
+.class-name {
+    font-size: 1rem;
+    font-weight: 300;
+    /* Lighter weight */
+    color: #1f2937;
+}
+
+.class-sections {
+    display: flex;
+    gap: 1.5rem;
+    /* Increased spacing */
+}
+
+.section-badge {
+    background-color: white;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    color: #374151;
+    font-weight: 500;
+    min-width: 48px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    border: none;
+    border-radius: 2px;
+    transition: all var(--transition-fast);
+}
+
+.section-badge:hover {
+    background-color: #ffffff;
+    transform: scale(1.25);
+    /* Much bigger enlarge */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+}
+
+.section-badge:active {
+    transform: scale(0.95);
+}

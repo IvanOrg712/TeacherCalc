@@ -1,0 +1,22 @@
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #374151;
+    /* Dark Gray (Gray 700) - Matching the image darker header */
+    color: white;
+    padding: 1rem 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-size: 1.1rem;
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+.navbar-user {
+    font-size: 0.9rem;
+    font-weight: 400;
+    opacity: 0.8;
+}
