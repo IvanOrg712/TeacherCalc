@@ -1,0 +1,23 @@
+.dashboard-container {
+    width: 100%;
+}
+
+.add-school-btn {
+    width: 100%;
+    background-color: #f3f4f6;
+    /* Very light gray (Gray 100) - Lighter than class list */
+    color: #374151;
+    font-size: 1.2rem;
+    padding: 1.5rem;
+    cursor: pointer;
+    border: 1px dashed #d1d5db;
+    /* Dashed border to indicate "Add" area distinct from content */
+    border-radius: 4px;
+    transition: all var(--transition-fast);
+    margin-top: 2rem;
+}
+
+.add-school-btn:hover {
+    background-color: #e5e7eb;
+    border-color: #9ca3af;
+}

@@ -1,0 +1,41 @@
+.school-section {
+    margin-bottom: 3rem;
+}
+
+.school-name {
+    font-size: 1.75rem;
+    font-weight: 300;
+    /* Lighter weight */
+    color: #111827;
+    margin-bottom: 1rem;
+    padding-left: 0.5rem;
+}
+
+.school-classes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    /* Explicit gap instead of margin-bottom on children */
+}
+
+/* Ensure Add Button matches Class Card dimensions/style */
+.add-class-btn {
+    background-color: #d1d5db;
+    color: #1f2937;
+    font-size: 1.5rem;
+    padding: 1rem 1.5rem;
+    /* Match ClassCard padding */
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border-radius: 2px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 64px;
+    /* Ensure consistent height if ClassCard content varies */
+}
+
+.add-class-btn:hover {
+    background-color: #9ca3af;
+    color: white;
+}
