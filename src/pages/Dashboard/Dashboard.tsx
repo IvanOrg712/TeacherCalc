@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout/DashboardLayout';
 import SchoolSection from '../../components/SchoolSection/SchoolSection';
 import type { School } from '../../types/models';
 import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
+    const navigate = useNavigate();
+
     // Extended Mock Data to simulate database content
-    const [schools, setSchools] = useState<School[]>([
+    const [schools] = useState<School[]>([
         {
             id: '1',
             name: "Universidad Central",
@@ -56,6 +59,10 @@ const Dashboard: React.FC = () => {
         // Logic to add subject would go here
     };
 
+    const handleGroupClick = (subjectId: string, groupId: string) => {
+        navigate(`/attendance/${subjectId}/${groupId}`);
+    };
+
     return (
         <DashboardLayout>
             <div className="dashboard-container">
@@ -65,6 +72,7 @@ const Dashboard: React.FC = () => {
                         schoolName={school.name}
                         subjects={school.subjects} // Passing the structured data
                         onAddClass={() => handleAddSubject(school.id)}
+                        onGroupClick={handleGroupClick}
                     />
                 ))}
 

@@ -28,3 +28,46 @@ Response (201 Created):
   ]
 }
 ```
+
+**Update Subject**
+- Endpoint: `PUT /api/subjects/{id}`
+- Backend Logic: Updates the subject's name and absences allowed.
+
+Request Body:
+```json
+{
+  "name": "Mathematics 1",
+  "absences_allowed": 8
+}
+```
+Response (200 OK):
+```json
+{
+  "id": 1,
+  "school_id": 1,
+  "name": "Mathematics 1",
+  "absences_allowed": 8,
+  "groups": [
+    { "id": 1, "name": "710" },
+    { "id": 2, "name": "711" },
+    { "id": 3, "name": "712" }
+  ]
+}
+```
+
+**Delete Subject**
+- Endpoint: `DELETE /api/subjects/{id}`
+- Backend Logic: Deletes the subject and its groups.
+
+Request Body:
+```json
+{
+  "id": 1
+}
+```
+Response (200 OK):
+```json
+{
+  "message": "Subject deleted successfully"
+}
+```

@@ -6,9 +6,10 @@ interface SchoolSectionProps {
     schoolName: string;
     subjects: Subject[];
     onAddClass?: () => void;
+    onGroupClick?: (subjectId: string, groupId: string) => void;
 }
 
-const SchoolSection: React.FC<SchoolSectionProps> = ({ schoolName, subjects, onAddClass }) => {
+const SchoolSection: React.FC<SchoolSectionProps> = ({ schoolName, subjects, onAddClass, onGroupClick }) => {
     return (
         <div className="school-section">
             <h2 className="school-name">{schoolName}</h2>
@@ -18,7 +19,8 @@ const SchoolSection: React.FC<SchoolSectionProps> = ({ schoolName, subjects, onA
                     <ClassCard
                         key={subject.id}
                         name={subject.name}
-                        sections={subject.groups.map(g => g.name)}
+                        sections={subject.groups}
+                        onSectionClick={(groupId) => onGroupClick?.(subject.id, groupId)}
                     />
                 ))}
 

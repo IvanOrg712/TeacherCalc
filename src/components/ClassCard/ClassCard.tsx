@@ -3,26 +3,25 @@ import './ClassCard.css';
 
 interface ClassCardProps {
     name: string;
-    sections: string[];
-    onClick?: () => void;
+    sections: { id: string; name: string }[];
+    onSectionClick?: (sectionId: string) => void;
 }
 
-const ClassCard: React.FC<ClassCardProps> = ({ name, sections, onClick }) => {
+const ClassCard: React.FC<ClassCardProps> = ({ name, sections, onSectionClick }) => {
     return (
         <div className="class-card">
             <div className="class-name">{name}</div>
             <div className="class-sections">
-                {sections.map((section, index) => (
+                {sections.map((section) => (
                     <button
-                        key={index}
+                        key={section.id}
                         className="section-badge"
                         onClick={(e) => {
                             e.stopPropagation();
-                            console.log(`Clicked section ${section}`);
-                            // Navigate logic here
+                            onSectionClick?.(section.id);
                         }}
                     >
-                        {section}
+                        {section.name}
                     </button>
                 ))}
             </div>

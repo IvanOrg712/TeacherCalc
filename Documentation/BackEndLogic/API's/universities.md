@@ -67,3 +67,24 @@ Response (200 OK):
   "midterm_count": 3
 }
 ```
+
+**Get School**
+- Endpoint: `GET /api/schools/{school_id}`
+- Description: Retrieves the school's information.
+
+Request Body:
+```json
+{
+  "school_id": 1
+}
+```
+
+Response (200 OK):
+```json
+{
+  "school_id": 1,
+  "name": "Technological University",
+  "passing_grade": 7.0,
+  "midterm_count": 3
+}
+```
