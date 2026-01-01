@@ -103,7 +103,7 @@ const AttendancePage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {students.map(student => (
+                            {students.map((student, studentIndex) => (
                                 <tr key={student.id}>
                                     <td
                                         className="student-col-unified"
@@ -111,7 +111,7 @@ const AttendancePage: React.FC = () => {
                                     >
                                         {student.lastName}, {student.firstName}
                                     </td>
-                                    {MOCK_TERMS.map(term => (
+                                    {MOCK_TERMS.map((term, termIndex) => (
                                         <React.Fragment key={term.id}>
                                             {term.dates.map((_, idx) => (
                                                 <td key={idx} className="unified-cell-hover">
@@ -121,6 +121,16 @@ const AttendancePage: React.FC = () => {
                                                             className="unified-input"
                                                             min="0"
                                                             max="1"
+                                                            data-student-index={studentIndex}
+                                                            data-column-id={`${termIndex}-${idx}`}
+                                                            onFocus={(e) => {
+                                                                const target = e.target as HTMLInputElement;
+                                                                // Clear existing value on focus so user can re-enter
+                                                                if (target.value !== "") {
+                                                                    target.value = "";
+                                                                    target.classList.remove('passing', 'failing');
+                                                                }
+                                                            }}
                                                             onKeyDown={(e) => {
                                                                 if (["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight"].includes(e.key)) return;
                                                                 if (!["0", "1"].includes(e.key)) {
@@ -139,11 +149,30 @@ const AttendancePage: React.FC = () => {
                                                                 }
 
                                                                 // Visual Feedback
-                                                                target.classList.remove('passing', 'failing'); // reuse unified classes
+                                                                target.classList.remove('passing', 'failing');
                                                                 if (target.value === "1") {
                                                                     target.classList.add('passing');
                                                                 } else if (target.value === "0") {
                                                                     target.classList.add('failing');
+                                                                }
+
+                                                                // Auto-advance to next cell in the same column
+                                                                if (target.value === "0" || target.value === "1") {
+                                                                    const currentStudentIndex = parseInt(target.dataset.studentIndex || "0");
+                                                                    const columnId = target.dataset.columnId;
+                                                                    const nextStudentIndex = currentStudentIndex + 1;
+
+                                                                    // Find next input in same column
+                                                                    const nextInput = document.querySelector(
+                                                                        `input[data-student-index="${nextStudentIndex}"][data-column-id="${columnId}"]`
+                                                                    ) as HTMLInputElement;
+
+                                                                    if (nextInput) {
+                                                                        nextInput.focus();
+                                                                    } else {
+                                                                        // Last student - blur the current cell
+                                                                        target.blur();
+                                                                    }
                                                                 }
                                                             }}
                                                         />
