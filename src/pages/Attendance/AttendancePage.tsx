@@ -54,22 +54,31 @@ const AttendancePage: React.FC = () => {
     return (
         <div className="attendance-page">
             <header className="attendance-header">
-                <h1>{subjectName}</h1>
+                <div className="header-left">
+                    <button className="back-button" onClick={() => navigate('/dashboard')} aria-label="Go back">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h1>{subjectName}</h1>
+                </div>
                 <div className="attendance-group">Grupo {groupName}</div>
             </header>
 
             <div className="attendance-content">
-                <div className="attendance-table-container">
-                    <table className="attendance-table">
+                <div className="unified-table-container">
+                    <table className="unified-table">
                         <thead>
                             <tr>
-                                <th rowSpan={2} style={{ minWidth: '200px', backgroundColor: '#f0f0f0' }}></th> {/* Empty for names */}
+                                <th rowSpan={2} className="student-col-unified">Nombre del Estudiante</th>
                                 {MOCK_TERMS.map(term => (
-                                    <th key={term.id} colSpan={term.dates.length + 1} className="header-parcial">
+                                    <th key={term.id} colSpan={term.dates.length + 1} className="unified-header-main">
                                         {term.name}
                                     </th>
                                 ))}
-                                <th rowSpan={2} className="header-summary">Inasistencias</th>
+                                <th rowSpan={2} className="unified-header-vertical">
+                                    <div className="vertical-text-wrapper">Inasistencias</div>
+                                </th>
                             </tr>
                             <tr>
                                 {MOCK_TERMS.map(term => (
@@ -77,14 +86,14 @@ const AttendancePage: React.FC = () => {
                                         {term.dates.map((date, idx) => (
                                             <th
                                                 key={idx}
-                                                className="header-date"
+                                                className="unified-header-vertical"
                                                 onContextMenu={(e) => handleContextMenu(e, 'date', `${term.id}-${idx}`)}
                                             >
-                                                <div className="date-vertical">{date}</div>
+                                                <div className="vertical-text-wrapper">{date}</div>
                                             </th>
                                         ))}
                                         <th
-                                            className="header-add-col"
+                                            className="add-btn-cell"
                                             onClick={() => console.log(`Add column to ${term.name}`)}
                                         >
                                             +
@@ -97,7 +106,7 @@ const AttendancePage: React.FC = () => {
                             {students.map(student => (
                                 <tr key={student.id}>
                                     <td
-                                        className="student-name-cell"
+                                        className="student-col-unified"
                                         onContextMenu={(e) => handleContextMenu(e, 'student', student.id)}
                                     >
                                         {student.lastName}, {student.firstName}
@@ -105,81 +114,91 @@ const AttendancePage: React.FC = () => {
                                     {MOCK_TERMS.map(term => (
                                         <React.Fragment key={term.id}>
                                             {term.dates.map((_, idx) => (
-                                                <td key={idx} className="attendance-cell">
-                                                    <input
-                                                        type="number"
-                                                        className="attendance-input"
-                                                        min="0"
-                                                        max="1"
-                                                        onKeyDown={(e) => {
-                                                            if (["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight"].includes(e.key)) return;
-                                                            if (!["0", "1"].includes(e.key)) {
-                                                                e.preventDefault();
-                                                            }
-                                                        }}
-                                                        onInput={(e) => {
-                                                            const target = e.target as HTMLInputElement;
-                                                            // Force single character
-                                                            if (target.value.length > 1) {
-                                                                target.value = target.value.slice(0, 1);
-                                                            }
-                                                            // Ensure strictly 0 or 1
-                                                            if (target.value !== "" && !["0", "1"].includes(target.value)) {
-                                                                target.value = "";
-                                                            }
+                                                <td key={idx} className="unified-cell-hover">
+                                                    <div className="cell-input-wrapper">
+                                                        <input
+                                                            type="number"
+                                                            className="unified-input"
+                                                            min="0"
+                                                            max="1"
+                                                            onKeyDown={(e) => {
+                                                                if (["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight"].includes(e.key)) return;
+                                                                if (!["0", "1"].includes(e.key)) {
+                                                                    e.preventDefault();
+                                                                }
+                                                            }}
+                                                            onInput={(e) => {
+                                                                const target = e.target as HTMLInputElement;
+                                                                // Force single character
+                                                                if (target.value.length > 1) {
+                                                                    target.value = target.value.slice(0, 1);
+                                                                }
+                                                                // Ensure strictly 0 or 1
+                                                                if (target.value !== "" && !["0", "1"].includes(target.value)) {
+                                                                    target.value = "";
+                                                                }
 
-                                                            // Visual Feedback
-                                                            target.classList.remove('present', 'absent');
-                                                            if (target.value === "1") {
-                                                                target.classList.add('present');
-                                                            } else if (target.value === "0") {
-                                                                target.classList.add('absent');
-                                                            }
-                                                        }}
-                                                    />
+                                                                // Visual Feedback
+                                                                target.classList.remove('passing', 'failing'); // reuse unified classes
+                                                                if (target.value === "1") {
+                                                                    target.classList.add('passing');
+                                                                } else if (target.value === "0") {
+                                                                    target.classList.add('failing');
+                                                                }
+                                                            }}
+                                                        />
+                                                    </div>
                                                 </td>
                                             ))}
-                                            <td className="attendance-cell" style={{ backgroundColor: '#fafafa' }}></td>
+                                            <td style={{ backgroundColor: '#fafafa' }}></td>
                                         </React.Fragment>
                                     ))}
-                                    <td className="summary-cell" style={{ textAlign: 'center' }}>0</td>
+                                    <td className="total-cell-unified" style={{ textAlign: 'center' }}>0</td>
                                 </tr>
                             ))}
                             {/* Summary/Add row */}
+                            {/* Add Student Row */}
                             <tr>
                                 <td
+                                    className="student-col-unified"
                                     style={{ textAlign: 'center', fontWeight: 'bold', cursor: 'pointer' }}
                                     onClick={() => console.log("Add student clicked")}
                                 >
                                     +
                                 </td>
-                                <td colSpan={100}></td>
+                                {MOCK_TERMS.map(term => (
+                                    <React.Fragment key={term.id}>
+                                        {/* Empty cells to match structure */}
+                                        <td colSpan={term.dates.length + 1} style={{ backgroundColor: '#fafafa' }}></td>
+                                    </React.Fragment>
+                                ))}
+                                <td></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <footer className="attendance-footer">
-                <button className="footer-btn active">Asistencia</button>
-                <button className="footer-btn" onClick={handleGradesClick}>Calificaciones</button>
+            <footer className="unified-footer">
+                <button className="footer-btn-unified active">Asistencia</button>
+                <button className="footer-btn-unified" onClick={handleGradesClick}>Calificaciones</button>
 
             </footer>
 
             {
                 contextMenu && (
                     <div
-                        className="context-menu"
+                        className="context-menu-unified"
                         style={{ top: contextMenu.y, left: contextMenu.x }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {contextMenu.type === 'student' && (
-                            <div className="context-menu-item" onClick={() => {
+                            <div className="context-menu-item-unified" onClick={() => {
                                 console.log(`Edit ${contextMenu.type}: ${contextMenu.id}`);
                                 setContextMenu(null);
                             }}>Edit</div>
                         )}
-                        <div className="context-menu-item danger" onClick={() => {
+                        <div className="context-menu-item-unified danger" onClick={() => {
                             console.log(`Delete ${contextMenu.type}: ${contextMenu.id}`);
                             setContextMenu(null);
                         }}>Delete</div>

@@ -1,3 +1,5 @@
+@import '../../styles/TableTheme.css';
+
 .attendance-page {
     display: flex;
     flex-direction: column;
@@ -33,209 +35,32 @@
     padding: 2rem;
     display: flex;
     justify-content: center;
-}
-
-.attendance-table-container {
-    background: white;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
-    max-width: 100%;
-}
-
-.attendance-table {
-    border-collapse: collapse;
-    width: auto;
-    font-size: 0.9rem;
-}
-
-.attendance-table th,
-.attendance-table td {
-    border: 1px solid #ccc;
-    text-align: center;
-    padding: 0;
-}
-
-/* Header Styles */
-.header-parcial {
-    background-color: #333;
-    color: white;
-    padding: 8px;
-    font-weight: 500;
-    border-color: #555;
-}
-
-.header-date {
-    background-color: #f0f0f0;
-    height: 120px;
-    vertical-align: bottom;
-    padding-bottom: 8px;
-    width: 28px;
-    position: relative;
-    border-bottom: 1px solid #ccc;
-}
-
-.date-vertical {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    white-space: nowrap;
-    margin: 0 auto;
-    padding: 4px 0;
-    font-size: 0.85rem;
-    color: #444;
-}
-
-.header-add-col {
-    width: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    background-color: #e0e0e0;
-}
-
-.header-add-col:hover {
-    background-color: #d0d0d0;
-}
-
-/* Row Styles */
-.student-name-cell {
-    text-align: left;
-    padding: 8px 12px;
-    min-width: 200px;
-    font-weight: 500;
-    color: #333;
-    background-color: #f9f9f9;
-}
-
-.attendance-cell {
-    width: 28px;
-    height: 28px;
-    cursor: pointer;
-}
-
-.attendance-cell:hover {
+    align-items: flex-start;
     background-color: #f5f5f5;
 }
 
-.attendance-cell.absent {
-    background-color: #ffebee;
-    position: relative;
-}
-
-.attendance-input {
-    width: 100%;
-    height: 100%;
-    border: none;
-    background: transparent;
-    text-align: center;
-    font-size: 1rem;
-    outline: none;
-    -moz-appearance: textfield;
-    appearance: textfield;
-    /* Remove arrows in Firefox */
-}
-
-.attendance-input::-webkit-outer-spin-button,
-.attendance-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    /* Remove arrows in Chrome/Safari */
-    margin: 0;
-}
-
-.attendance-input.present {
-    background-color: #e8f5e9;
-    color: #2e7d32;
-    font-weight: bold;
-}
-
-.attendance-input.absent {
-    background-color: #ffebee;
-    color: #c62828;
-    font-weight: bold;
-}
-
-/* Summary Column */
-.header-summary {
-    background-color: #e0e0e0;
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    padding: 10px 4px;
-    height: 120px;
-    font-size: 0.85rem;
-    color: #333;
-}
-
-.summary-cell {
-    font-weight: bold;
-    background-color: #e8f5e9;
-    /* Light green base */
-    color: #2e7d32;
-}
-
-.summary-cell.warning {
-    background-color: #fff3e0;
-    color: #ef6c00;
-}
-
-.summary-cell.danger {
-    background-color: #ffebee;
-    color: #c62828;
-}
-
-/* Bottom Nav */
-.attendance-footer {
+/* Header Layout */
+.header-left {
     display: flex;
-    background-color: #e0e0e0;
+    align-items: center;
+    gap: 1rem;
 }
 
-.footer-btn {
-    padding: 1rem 2rem;
+.back-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
     border: none;
-    background: none;
-    font-size: 1rem;
+    background-color: transparent;
+    border-radius: 8px;
     cursor: pointer;
-    color: #666;
-    flex: 1;
-    /* max-width: 200px; Removed to allow full width expansion */
-    text-align: center;
-}
-
-.footer-btn.active {
-    background-color: #5c6bc0;
-    /* Indigo/Blue-ish */
-    color: white;
-}
-
-.footer-btn:hover:not(.active) {
-    background-color: #d0d0d0;
-}
-
-/* Context Menu */
-.context-menu {
-    position: absolute;
-    background: white;
-    border: 1px solid #ddd;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
-    z-index: 1000;
-    min-width: 120px;
-    padding: 4px 0;
-}
-
-.context-menu-item {
-    padding: 8px 16px;
-    cursor: pointer;
-    font-size: 0.9rem;
     color: #333;
+    transition: background-color 0.2s, color 0.2s;
 }
 
-.context-menu-item:hover {
-    background-color: #f5f5f5;
-}
-
-.context-menu-item.danger {
-    color: #d32f2f;
-}
-
-.context-menu-item.danger:hover {
-    background-color: #ffebee;
+.back-button:hover {
+    background-color: #e0e0e0;
+    color: #5c6bc0;
 }

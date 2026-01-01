@@ -68,7 +68,7 @@ const GradesPage: React.FC = () => {
             // Force re-render to show updated color (in a real app, strict state mgmt would handle this)
             const el = document.getElementById(`grade-${studentId}-${activityId}`);
             if (el) {
-                el.className = `grade-input ${numValue < 6 ? 'failing' : 'passing'}`;
+                el.className = `unified-input ${numValue < 6 ? 'failing' : 'passing'}`;
             }
         }
     };
@@ -81,7 +81,14 @@ const GradesPage: React.FC = () => {
     return (
         <div className="grades-page">
             <header className="grades-header">
-                <h1>{subjectName}</h1>
+                <div className="header-left">
+                    <button className="back-button" onClick={() => navigate('/dashboard')} aria-label="Go back">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h1>{subjectName}</h1>
+                </div>
                 <div className="grades-group">Grupo {groupName}</div>
             </header>
 
@@ -98,58 +105,73 @@ const GradesPage: React.FC = () => {
             </div>
 
             <div className="grades-content">
-                <div className="grades-table-container">
-                    <table className="grades-table">
+                <div className="unified-table-container">
+                    <table className="unified-table">
                         <thead>
                             {/* Row 1: Evaluations */}
                             <tr>
-                                <th rowSpan={2} className="student-col">Student Name</th>
+                                <th rowSpan={2} className="student-col-unified">Nombre del Estudiante</th>
                                 {evaluations.map(ev => (
                                     <th
                                         key={ev.id}
-                                        colSpan={activities[ev.id]?.length || 1}
-                                        className="evaluation-header"
+                                        colSpan={(activities[ev.id]?.length || 1) + 1}
+                                        className="unified-header-main"
                                     >
                                         {ev.name} ({ev.weightPercentage}%)
                                     </th>
                                 ))}
-                                <th rowSpan={2} style={{ width: '60px' }}>Total</th>
+                                <th rowSpan={2} className="unified-header-vertical">
+                                    <div className="vertical-text-wrapper">Calificación Final</div>
+                                </th>
                             </tr>
                             {/* Row 2: Activities */}
                             <tr>
                                 {evaluations.map(ev => (
-                                    activities[ev.id]?.map(act => (
-                                        <th key={act.id} className="activity-header">
-                                            <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                                                {act.name}
-                                            </div>
+                                    <React.Fragment key={`${ev.id}-activities`}>
+                                        {activities[ev.id]?.map(act => (
+                                            <th key={act.id} className="unified-header-vertical">
+                                                <div className="vertical-text-wrapper">
+                                                    {act.name}
+                                                </div>
+                                            </th>
+                                        ))}
+                                        <th
+                                            className="add-btn-cell"
+                                            onClick={() => console.log(`Add activity to ${ev.name}`)}
+                                        >
+                                            +
                                         </th>
-                                    ))
+                                    </React.Fragment>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
                             {students.map(student => (
                                 <tr key={student.id}>
-                                    <td className="student-col">{student.lastName}, {student.firstName}</td>
+                                    <td className="student-col-unified">{student.lastName}, {student.firstName}</td>
                                     {evaluations.map(ev => (
-                                        activities[ev.id]?.map(act => {
-                                            const score = getStudentGrade(student.id, act.id);
-                                            return (
-                                                <td key={act.id}>
-                                                    <input
-                                                        id={`grade-${student.id}-${act.id}`}
-                                                        type="number"
-                                                        className={`grade-input ${getGradeColorClass(score)}`}
-                                                        defaultValue={score}
-                                                        min="0" max="10" step="0.1"
-                                                        onBlur={(e) => handleGradeChange(student.id, act.id, e.target.value)}
-                                                    />
-                                                </td>
-                                            );
-                                        })
+                                        <React.Fragment key={`${student.id}-${ev.id}`}>
+                                            {activities[ev.id]?.map(act => {
+                                                const score = getStudentGrade(student.id, act.id);
+                                                return (
+                                                    <td key={act.id} className="unified-cell-hover">
+                                                        <div className="cell-input-wrapper">
+                                                            <input
+                                                                id={`grade-${student.id}-${act.id}`}
+                                                                type="number"
+                                                                className={`unified-input ${getGradeColorClass(score)}`}
+                                                                defaultValue={score}
+                                                                min="0" max="10" step="0.1"
+                                                                onBlur={(e) => handleGradeChange(student.id, act.id, e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </td>
+                                                );
+                                            })}
+                                            <td style={{ backgroundColor: '#fafafa' }}></td>
+                                        </React.Fragment>
                                     ))}
-                                    <td style={{ fontWeight: 'bold' }}>
+                                    <td className="total-cell-unified">
                                         {/* Total calculation placeholder */}
                                         -
                                     </td>
@@ -160,9 +182,9 @@ const GradesPage: React.FC = () => {
                 </div>
             </div>
 
-            <footer className="attendance-footer">
-                <button className="footer-btn" onClick={() => navigate(`/attendance/${subjectId}/${groupId}`)}>Asistencia</button>
-                <button className="footer-btn active">Calificaciones</button>
+            <footer className="unified-footer">
+                <button className="footer-btn-unified" onClick={() => navigate(`/attendance/${subjectId}/${groupId}`)}>Asistencia</button>
+                <button className="footer-btn-unified active">Calificaciones</button>
             </footer>
         </div>
     );
