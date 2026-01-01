@@ -2,52 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout/DashboardLayout';
 import SchoolSection from '../../components/SchoolSection/SchoolSection';
-import type { School } from '../../types/models';
+import { MOCK_SCHOOLS } from '../../data/mockData';
 import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
 
-    // Extended Mock Data to simulate database content
-    const [schools] = useState<School[]>([
-        {
-            id: '1',
-            name: "Universidad Central",
-            subjects: [
-                {
-                    id: 's1',
-                    name: "Matemáticas Discretas",
-                    groups: [{ id: 'g1', name: "710" }, { id: 'g2', name: "711" }, { id: 'g3', name: "712" }]
-                },
-                {
-                    id: 's2',
-                    name: "Álgebra Lineal",
-                    groups: [{ id: 'g4', name: "820" }, { id: 'g5', name: "821" }]
-                }
-            ]
-        },
-        {
-            id: '2',
-            name: "Instituto Politécnico",
-            subjects: [
-                {
-                    id: 's3',
-                    name: "Física Mecánica",
-                    groups: [{ id: 'g6', name: "101" }, { id: 'g7', name: "102" }]
-                },
-                {
-                    id: 's4',
-                    name: "Cálculo Diferencial",
-                    groups: [{ id: 'g8', name: "201" }]
-                },
-                {
-                    id: 's5',
-                    name: "Estadística Básica",
-                    groups: [{ id: 'g9', name: "301" }]
-                }
-            ]
-        }
-    ]);
+    // Use centralized mock data
+    const [schools] = useState(MOCK_SCHOOLS);
 
     const handleAddSchool = () => {
         console.log("Add School Clicked");
