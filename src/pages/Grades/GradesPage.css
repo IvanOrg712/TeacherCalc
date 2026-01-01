@@ -1,0 +1,121 @@
+/* Grades Page Layout */
+.grades-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #f5f5f5;
+    font-family: 'Inter', sans-serif;
+}
+
+.grades-header {
+    background-color: white;
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.grades-content {
+    flex: 1;
+    overflow: auto;
+    padding: 2rem;
+}
+
+/* Tabs */
+.midterm-tabs {
+    display: flex;
+    background-color: white;
+    padding: 0 2rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.midterm-tab {
+    padding: 1rem 2rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.2s;
+}
+
+.midterm-tab:hover {
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+.midterm-tab.active {
+    border-bottom-color: #5c6bc0;
+    color: #5c6bc0;
+}
+
+/* Table */
+.grades-table-container {
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.grades-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.grades-table th,
+.grades-table td {
+    border: 1px solid #e0e0e0;
+    padding: 8px;
+    text-align: center;
+}
+
+.grades-table th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+}
+
+.evaluation-header {
+    background-color: #333;
+    color: white;
+}
+
+.activity-header {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    padding: 1rem 0.5rem;
+    height: 120px;
+    white-space: nowrap;
+}
+
+.student-col {
+    text-align: left !important;
+    min-width: 200px;
+    background-color: #f9f9f9;
+    font-weight: 500;
+}
+
+.grade-input {
+    width: 100%;
+    border: none;
+    text-align: center;
+    font-size: 1rem;
+    padding: 4px;
+}
+
+.grade-input:focus {
+    outline: 2px solid #5c6bc0;
+    background-color: #e8eaf6;
+}
+
+.grade-input.passing {
+    color: #2e7d32;
+    background-color: #e8f5e9;
+    font-weight: bold;
+}
+
+.grade-input.failing {
+    color: #c62828;
+    background-color: #ffebee;
+    font-weight: bold;
+}

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getSubject, getGroup, getStudentsForGroup, MOCK_TERMS } from '../../data/mockData';
 import type { Student } from '../../types/models';
 import './AttendancePage.css';
 
 const AttendancePage: React.FC = () => {
     const { subjectId, groupId } = useParams<{ subjectId: string; groupId: string }>();
+    const navigate = useNavigate();
     // const navigate = useNavigate();
 
     // State
@@ -47,8 +48,7 @@ const AttendancePage: React.FC = () => {
     }, [subjectId, groupId]);
 
     const handleGradesClick = () => {
-        console.log("Grades button clicked - Not implemented yet");
-        // navigate(`/grades/${subjectId}/${groupId}`);
+        navigate(`/grades/${subjectId}/${groupId}`);
     };
 
     return (

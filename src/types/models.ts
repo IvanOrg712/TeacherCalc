@@ -44,3 +44,30 @@ export interface Term {
     name: string;
     dates: string[];
 }
+
+// Grades Hierarchy
+export interface Midterm {
+    id: string;
+    name: string; // "Parcial 1"
+    groupId: string;
+}
+
+export interface Evaluation {
+    id: string;
+    name: string; // "Trabajos", "Examen"
+    midtermId: string;
+    weightPercentage: number; // 0-100
+}
+
+export interface Activity {
+    id: string;
+    name: string; // "Tarea 1"
+    evaluationId: string;
+    maxScore: number;
+}
+
+export interface Grade {
+    studentId: string;
+    activityId: string;
+    score: number;
+}

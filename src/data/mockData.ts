@@ -1,4 +1,4 @@
-import type { School, Student, Term } from '../types/models';
+import type { School, Student, Term, Midterm, Evaluation, Activity } from '../types/models';
 
 // --- Mock Students ---
 export const MOCK_STUDENTS: Record<string, Student> = {};
@@ -75,7 +75,75 @@ export const MOCK_SCHOOLS: School[] = [
             }
         ]
     }
+
 ];
+
+// --- Mock Grades Data Hierarchical ---
+
+export const MOCK_MIDTERMS: Midterm[] = [];
+export const MOCK_EVALUATIONS: Evaluation[] = [];
+export const MOCK_ACTIVITIES: Activity[] = [];
+export const MOCK_GRADES: Record<string, number> = {}; // key: ${studentId}-${activityId}
+
+// Helpers to seeding data
+const seedGradesData = () => {
+    // Generate data for all groups in all schools
+    MOCK_SCHOOLS.forEach(school => {
+        school.subjects.forEach(subject => {
+            subject.groups.forEach(group => {
+                // 1. Create 3 Midterms for each group
+                ['Parcial 1', 'Parcial 2', 'Parcial 3'].forEach((mName, mIdx) => {
+                    const midtermId = `${group.id}-m${mIdx + 1}`;
+                    MOCK_MIDTERMS.push({
+                        id: midtermId,
+                        name: mName,
+                        groupId: group.id
+                    });
+
+                    // 2. Create Evaluations for each Midterm
+                    // Design implies: Trabajos (Assignments), Proyectos, Examen
+                    const evaluationsSpec = [
+                        { name: "Trabajos", weight: 40, activitiesCount: 5, prefix: "Practica" },
+                        { name: "Proyecto", weight: 20, activitiesCount: 1, prefix: "Conclusión" },
+                        { name: "Examen", weight: 40, activitiesCount: 1, prefix: "Listening" } // Using design names loosely
+                    ];
+
+                    evaluationsSpec.forEach((evalSpec, eIdx) => {
+                        const evalId = `${midtermId}-e${eIdx + 1}`;
+                        MOCK_EVALUATIONS.push({
+                            id: evalId,
+                            name: evalSpec.name,
+                            midtermId: midtermId,
+                            weightPercentage: evalSpec.weight
+                        });
+
+                        // 3. Create Activities for each Evaluation
+                        for (let a = 1; a <= evalSpec.activitiesCount; a++) {
+                            const actId = `${evalId}-a${a}`;
+                            MOCK_ACTIVITIES.push({
+                                id: actId,
+                                name: evalSpec.activitiesCount > 1 ? `${evalSpec.prefix} #${a}` : evalSpec.prefix,
+                                evaluationId: evalId,
+                                maxScore: 10
+                            });
+
+                            // 4. Generate Grades for Students in Group
+                            group.studentIds.forEach(studentId => {
+                                const key = `${studentId}-${actId}`;
+                                // Random score between 0 and 10, mostly high
+                                const randomScore = Math.floor(Math.random() * 4) + 7; // 7-10
+                                MOCK_GRADES[key] = randomScore > 10 ? 10 : randomScore;
+                            });
+                        }
+                    });
+                });
+            });
+        });
+    });
+};
+
+// Initialize the seed
+seedGradesData();
 
 // --- Utility Functions ---
 
@@ -109,4 +177,25 @@ export const getStudentsForGroup = (groupId: string): Student[] => {
     const groupData = getGroup(groupId);
     if (!groupData) return [];
     return groupData.group.studentIds.map((id: string) => MOCK_STUDENTS[id]).filter(Boolean);
+
+};
+
+export const getMidtermsForGroup = (groupId: string): Midterm[] => {
+    return MOCK_MIDTERMS.filter(m => m.groupId === groupId);
+};
+
+export const getEvaluationsForMidterm = (midtermId: string): Evaluation[] => {
+    return MOCK_EVALUATIONS.filter(e => e.midtermId === midtermId);
+};
+
+export const getActivitiesForEvaluation = (evaluationId: string): Activity[] => {
+    return MOCK_ACTIVITIES.filter(a => a.evaluationId === evaluationId);
+};
+
+export const getStudentGrade = (studentId: string, activityId: string): number | undefined => {
+    return MOCK_GRADES[`${studentId}-${activityId}`];
+};
+
+export const updateStudentGrade = (studentId: string, activityId: string, score: number) => {
+    MOCK_GRADES[`${studentId}-${activityId}`] = score;
 };
