@@ -146,13 +146,14 @@ const GradesPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {students.map(student => (
+                            {students.map((student, studentIndex) => (
                                 <tr key={student.id}>
                                     <td className="student-col-unified">{student.lastName}, {student.firstName}</td>
-                                    {evaluations.map(ev => (
+                                    {evaluations.map((ev, evIndex) => (
                                         <React.Fragment key={`${student.id}-${ev.id}`}>
-                                            {activities[ev.id]?.map(act => {
+                                            {activities[ev.id]?.map((act, actIndex) => {
                                                 const score = getStudentGrade(student.id, act.id);
+                                                const columnId = `${evIndex}-${actIndex}`;
                                                 return (
                                                     <td key={act.id} className="unified-cell-hover">
                                                         <div className="cell-input-wrapper">
@@ -162,6 +163,48 @@ const GradesPage: React.FC = () => {
                                                                 className={`unified-input ${getGradeColorClass(score)}`}
                                                                 defaultValue={score}
                                                                 min="0" max="10" step="0.1"
+                                                                data-student-index={studentIndex}
+                                                                data-column-id={columnId}
+                                                                onFocus={(e) => {
+                                                                    const target = e.target as HTMLInputElement;
+                                                                    // Clear existing value on focus so user can re-enter
+                                                                    if (target.value !== "") {
+                                                                        target.value = "";
+                                                                        target.classList.remove('passing', 'failing');
+                                                                    }
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === "Enter") {
+                                                                        e.preventDefault();
+                                                                        const target = e.target as HTMLInputElement;
+
+                                                                        // Save the grade
+                                                                        handleGradeChange(student.id, act.id, target.value);
+
+                                                                        // Update visual feedback
+                                                                        const numValue = parseFloat(target.value);
+                                                                        target.classList.remove('passing', 'failing');
+                                                                        if (!isNaN(numValue)) {
+                                                                            target.classList.add(numValue < 6 ? 'failing' : 'passing');
+                                                                        }
+
+                                                                        // Auto-advance to next cell in the same column
+                                                                        const currentStudentIndex = parseInt(target.dataset.studentIndex || "0");
+                                                                        const colId = target.dataset.columnId;
+                                                                        const nextStudentIndex = currentStudentIndex + 1;
+
+                                                                        const nextInput = document.querySelector(
+                                                                            `input[data-student-index="${nextStudentIndex}"][data-column-id="${colId}"]`
+                                                                        ) as HTMLInputElement;
+
+                                                                        if (nextInput) {
+                                                                            nextInput.focus();
+                                                                        } else {
+                                                                            // Last student - blur the current cell
+                                                                            target.blur();
+                                                                        }
+                                                                    }
+                                                                }}
                                                                 onBlur={(e) => handleGradeChange(student.id, act.id, e.target.value)}
                                                             />
                                                         </div>
