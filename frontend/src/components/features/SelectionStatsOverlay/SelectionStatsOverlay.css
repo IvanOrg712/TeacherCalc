@@ -1,0 +1,176 @@
+/* Selection Stats Overlay - Glassmorphism Style */
+
+.stats-overlay {
+    position: fixed;
+    bottom: 80px;
+    right: 24px;
+    min-width: 280px;
+    max-width: 320px;
+    
+    /* Glassmorphism effect */
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.12),
+        0 2px 8px rgba(0, 0, 0, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    
+    padding: 16px;
+    z-index: 1000;
+    
+    /* Entrance animation */
+    animation: slideUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Header */
+.stats-overlay-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(92, 107, 192, 0.15);
+}
+
+.stats-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.stats-count {
+    font-size: 0.8rem;
+    color: #666;
+    background: rgba(92, 107, 192, 0.12);
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 10px;
+    background: rgba(245, 245, 245, 0.6);
+    border-radius: 10px;
+    transition: background 0.2s ease;
+}
+
+.stat-item:hover {
+    background: rgba(92, 107, 192, 0.08);
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.stat-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.stat-value.primary {
+    color: #5c6bc0;
+    font-size: 1.25rem;
+}
+
+/* Divider */
+.stats-divider {
+    height: 1px;
+    background: linear-gradient(
+        to right,
+        transparent,
+        rgba(92, 107, 192, 0.2),
+        transparent
+    );
+    margin: 14px 0;
+}
+
+/* Pass/Fail Section */
+.stats-pass-fail {
+    display: flex;
+    gap: 8px;
+}
+
+.pass-fail-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 6px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.pass-fail-item.passing {
+    background: rgba(46, 125, 50, 0.1);
+}
+
+.pass-fail-item.failing {
+    background: rgba(198, 40, 40, 0.1);
+}
+
+.pass-fail-item.rate {
+    background: rgba(92, 107, 192, 0.1);
+}
+
+.pf-label {
+    font-size: 0.65rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 2px;
+}
+
+.pf-value {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.pass-fail-item.passing .pf-value {
+    color: #2e7d32;
+}
+
+.pass-fail-item.failing .pf-value {
+    color: #c62828;
+}
+
+.pass-fail-item.rate .pf-value {
+    color: #5c6bc0;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 600px) {
+    .stats-overlay {
+        left: 16px;
+        right: 16px;
+        bottom: 70px;
+        max-width: none;
+    }
+}

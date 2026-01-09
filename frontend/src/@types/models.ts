@@ -25,10 +25,17 @@ export interface Subject {
     groups: Group[];
 }
 
+export interface GradingConfig {
+    passingGrade: number; // Minimum grade to pass (e.g., 6, 7, or 60 for percentage-based)
+    maxGrade: number; // Maximum possible grade (e.g., 10 or 100)
+    gradeScale: 'numeric' | 'percentage'; // Type of grading scale
+}
+
 export interface School {
     id: string;
     name: string; // e.g. "Universidad Tecnológica"
     subjects: Subject[];
+    gradingConfig: GradingConfig; // School-specific grading configuration
 }
 
 export interface Teacher {

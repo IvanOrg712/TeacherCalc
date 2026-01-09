@@ -91,3 +91,152 @@
     border-bottom-color: #5c6bc0;
     color: #5c6bc0;
 }
+
+/* =========================
+   Cell Selection Styles
+   ========================= */
+
+/* Prevent text selection during drag and cell selection */
+.grades-selectable {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Prevent text selection in cells and inputs when not editing */
+.grades-selectable td,
+.grades-selectable th,
+.grades-selectable .cell-input-wrapper,
+.grades-selectable .unified-input.grade-readonly {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Allow text selection only when actively editing */
+.grades-selectable .unified-input.grade-editing {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* Selected cell highlighting */
+.cell-selected {
+    position: relative;
+}
+
+/* Selection overlay that works over filled cells */
+.cell-selected .cell-input-wrapper {
+    position: relative;
+}
+
+.cell-selected .cell-input-wrapper::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(92, 107, 192, 0.25);
+    border: 2px solid rgba(92, 107, 192, 0.6);
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Override passing/failing backgrounds when selected */
+.cell-selected .unified-input.passing,
+.cell-selected .unified-input.failing {
+    position: relative;
+}
+
+/* Read-only style for grade inputs (until activated) */
+.unified-input.grade-readonly {
+    cursor: pointer;
+    caret-color: transparent;
+}
+
+.unified-input.grade-readonly:focus {
+    background-color: transparent;
+    box-shadow: none;
+}
+
+/* Active editing mode */
+.unified-input.grade-editing {
+    cursor: text;
+    caret-color: auto;
+}
+
+.unified-input.grade-editing:focus {
+    background-color: #e8eaf6 !important;
+    box-shadow: inset 0 0 0 2px #5c6bc0 !important;
+}
+
+/* Clickable student name for row selection */
+.student-name-selectable {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.student-name-selectable:hover {
+    background-color: #e8eaf6 !important;
+}
+
+/* Clickable activity header for column selection */
+.activity-header-selectable {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.activity-header-selectable:hover {
+    background-color: #e0e3e8 !important;
+}
+
+.activity-header-selectable .vertical-text-wrapper {
+    color: inherit;
+}
+
+/* Final grade value styling */
+.final-grade-value {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 0.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.final-grade-value.passing {
+    color: #2e7d32;
+    background-color: rgba(232, 245, 233, 0.5);
+}
+
+.final-grade-value.failing {
+    color: #c62828;
+    background-color: rgba(255, 235, 238, 0.5);
+}
+
+/* Make final grade cells clickable */
+.total-cell-unified {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    padding: 0 !important;
+    /* Override TableTheme padding to allow full filling */
+    height: 100%;
+}
+
+.total-cell-unified:hover {
+    background-color: #e8eaf6 !important;
+}
+
+/* Ensure wrapper fills the cell */
+.total-cell-unified .cell-input-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 40px;
+    /* Match row height */
+}
