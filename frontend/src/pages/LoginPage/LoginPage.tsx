@@ -23,33 +23,22 @@ const LoginPage: React.FC = () => {
         }
         setEmailError('');
 
-        // SIMULATED BACKEND CALL
-        // In a real app, this would be: const response = await api.login(email, password);
-        console.log("Attempting login...");
+        // Real Backend Call
+        try {
+            const { login } = await import('../../api/auth');
+            const data = await login({ email, password });
 
-        // Mocking network delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+            // Store tokens
+            localStorage.setItem('accessToken', data.access);
+            localStorage.setItem('refreshToken', data.refresh);
 
-        // Mock response from backend
-        const mockResponse = {
-            token: "abc-123-jwt-token",
-            teacher: {
-                id: "teacher-001", // This is the ID linked to everything
-                firstName: "Esteban",
-                lastName: "Dido",
-                email: email,
-                schoolIds: ["1", "2"]
-            }
-        };
-
-        console.log("Login Successful!");
-        console.log("Teacher ID:", mockResponse.teacher.id);
-        console.log("Auth Token:", mockResponse.token);
-
-        // Store context (e.g. Redux, Context API, or LocalStorage for now)
-        localStorage.setItem('teacherId', mockResponse.teacher.id);
-
-        navigate('/dashboard');
+            // Navigate to Dashboard
+            navigate('/dashboard');
+        } catch (error) {
+            console.error(error);
+            // Basic error handling
+            setEmailError('Error al iniciar sesión. Verifique sus credenciales.');
+        }
     };
 
     return (

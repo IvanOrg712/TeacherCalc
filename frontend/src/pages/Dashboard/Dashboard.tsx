@@ -9,7 +9,23 @@ const Dashboard: React.FC = () => {
     const navigate = useNavigate();
 
     // Use centralized mock data
-    const [schools] = useState(MOCK_SCHOOLS);
+    // const [schools] = useState(MOCK_SCHOOLS);
+    const [schools, setSchools] = useState<any[]>(MOCK_SCHOOLS); // Fallback to mock for now
+
+    React.useEffect(() => {
+        const fetchSchools = async () => {
+            try {
+                // Dynamic import to avoid circular dependencies if any, or just standard import
+                const { default: api } = await import('../../api/client');
+                const response = await api.get('/v1/schools/');
+                console.log("Fetched Schools:", response.data);
+                // If we had real data, we would setSchools(response.data);
+            } catch (error) {
+                console.error("Error fetching schools:", error);
+            }
+        };
+        fetchSchools();
+    }, []);
 
     const handleAddSchool = () => {
         console.log("Add School Clicked");
