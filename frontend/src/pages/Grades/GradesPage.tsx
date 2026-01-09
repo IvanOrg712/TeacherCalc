@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     getSubject,
@@ -11,6 +11,9 @@ import {
     updateStudentGrade
 } from '../../data/mockData';
 import type { Student, Midterm, Evaluation, Activity } from '../../@types/models';
+import { useTableSelection } from '../../hooks/useTableSelection';
+import { calculateAllStats } from '../../utils/statsUtils';
+import SelectionStatsOverlay from '../../components/features/SelectionStatsOverlay/SelectionStatsOverlay';
 import './GradesPage.css';
 
 const GradesPage: React.FC = () => {
@@ -26,6 +29,85 @@ const GradesPage: React.FC = () => {
     const [activeMidtermId, setActiveMidtermId] = useState<string | null>(null);
     const [subjectName, setSubjectName] = useState("Loading...");
     const [groupName, setGroupName] = useState("");
+
+    // Build a flat column structure for selection logic
+    // Each entry: { type: 'activity' | 'plus' | 'final', evalId?, actId?, actIndex?, evIndex? }
+    const columnStructure = useMemo(() => {
+        const cols: Array<{ type: 'activity' | 'plus' | 'final'; evalId?: string; actId?: string; globalColIndex: number }> = [];
+        let globalIdx = 0;
+
+        evaluations.forEach(ev => {
+            const acts = activities[ev.id] || [];
+            acts.forEach(act => {
+                cols.push({ type: 'activity', evalId: ev.id, actId: act.id, globalColIndex: globalIdx });
+                globalIdx++;
+            });
+            // Plus column (not selectable)
+            cols.push({ type: 'plus', evalId: ev.id, globalColIndex: globalIdx });
+            globalIdx++;
+        });
+        // Final grade column (not selectable)
+        cols.push({ type: 'final', globalColIndex: globalIdx });
+
+        return cols;
+    }, [evaluations, activities]);
+
+    // Total number of selectable columns
+    const totalCols = columnStructure.length;
+
+    // Determine if a cell is selectable (exclude plus columns and final grade)
+    const isSelectable = useCallback((_row: number, col: number): boolean => {
+        if (col < 0 || col >= columnStructure.length) return false;
+        const colInfo = columnStructure[col];
+        return colInfo.type === 'activity';
+    }, [columnStructure]);
+
+    // Selection hook
+    const {
+        selectedCells,
+        handleCellMouseDown,
+        handleCellMouseEnter,
+        handleMouseUp,
+        handleRowSelect,
+        handleColumnSelect,
+        clearSelection,
+        isSelected
+    } = useTableSelection({
+        totalRows: students.length,
+        totalCols,
+        isSelectable
+    });
+
+    // Build a 2D array of grade values for quick lookup
+    const gradeMatrix = useMemo(() => {
+        const matrix: (number | undefined)[][] = [];
+        students.forEach((student) => {
+            const row: (number | undefined)[] = [];
+            columnStructure.forEach(colInfo => {
+                if (colInfo.type === 'activity' && colInfo.actId) {
+                    row.push(getStudentGrade(student.id, colInfo.actId));
+                } else {
+                    row.push(undefined);
+                }
+            });
+            matrix.push(row);
+        });
+        return matrix;
+    }, [students, columnStructure]);
+
+    // Calculate stats from selected cells
+    const selectionStats = useMemo(() => {
+        const values: number[] = [];
+        selectedCells.forEach(key => {
+            const [rowStr, colStr] = key.split('-');
+            const row = parseInt(rowStr);
+            const col = parseInt(colStr);
+            if (gradeMatrix[row] && gradeMatrix[row][col] !== undefined) {
+                values.push(gradeMatrix[row][col] as number);
+            }
+        });
+        return calculateAllStats(values);
+    }, [selectedCells, gradeMatrix]);
 
     // Load Initial Data
     useEffect(() => {
@@ -61,11 +143,32 @@ const GradesPage: React.FC = () => {
         }
     }, [activeMidtermId]);
 
+    // Clear selection when midterm changes
+    useEffect(() => {
+        clearSelection();
+    }, [activeMidtermId, clearSelection]);
+
+    // Handle Escape key to clear selection
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                clearSelection();
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [clearSelection]);
+
+    // Handle mouse up globally to end drag selection
+    useEffect(() => {
+        document.addEventListener('mouseup', handleMouseUp);
+        return () => document.removeEventListener('mouseup', handleMouseUp);
+    }, [handleMouseUp]);
+
     const handleGradeChange = (studentId: string, activityId: string, value: string) => {
         const numValue = parseFloat(value);
         if (!isNaN(numValue) && numValue >= 0 && numValue <= 10) {
             updateStudentGrade(studentId, activityId, numValue);
-            // Force re-render to show updated color (in a real app, strict state mgmt would handle this)
             const el = document.getElementById(`grade-${studentId}-${activityId}`);
             if (el) {
                 el.className = `unified-input ${numValue < 6 ? 'failing' : 'passing'}`;
@@ -76,6 +179,18 @@ const GradesPage: React.FC = () => {
     const getGradeColorClass = (score: number | undefined) => {
         if (score === undefined) return '';
         return score < 6 ? 'failing' : 'passing';
+    };
+
+    // Build column header click handlers (for selecting entire column)
+    // Returns the global column index for an activity
+    const getActivityColIndex = (evIndex: number, actIndex: number): number => {
+        let colIdx = 0;
+        for (let e = 0; e < evIndex; e++) {
+            const ev = evaluations[e];
+            const acts = activities[ev.id] || [];
+            colIdx += acts.length + 1; // activities + plus column
+        }
+        return colIdx + actIndex;
     };
 
     return (
@@ -106,7 +221,7 @@ const GradesPage: React.FC = () => {
 
             <div className="grades-content">
                 <div className="unified-table-container">
-                    <table className="unified-table">
+                    <table className="unified-table grades-selectable">
                         <thead>
                             {/* Row 1: Evaluations */}
                             <tr>
@@ -126,15 +241,22 @@ const GradesPage: React.FC = () => {
                             </tr>
                             {/* Row 2: Activities */}
                             <tr>
-                                {evaluations.map(ev => (
+                                {evaluations.map((ev, evIndex) => (
                                     <React.Fragment key={`${ev.id}-activities`}>
-                                        {activities[ev.id]?.map(act => (
-                                            <th key={act.id} className="unified-header-vertical">
-                                                <div className="vertical-text-wrapper">
-                                                    {act.name}
-                                                </div>
-                                            </th>
-                                        ))}
+                                        {activities[ev.id]?.map((act, actIndex) => {
+                                            const colIdx = getActivityColIndex(evIndex, actIndex);
+                                            return (
+                                                <th
+                                                    key={act.id}
+                                                    className="unified-header-vertical activity-header-selectable"
+                                                    onClick={() => handleColumnSelect(colIdx)}
+                                                >
+                                                    <div className="vertical-text-wrapper">
+                                                        {act.name}
+                                                    </div>
+                                                </th>
+                                            );
+                                        })}
                                         <th
                                             className="add-btn-cell"
                                             onClick={() => console.log(`Add activity to ${ev.name}`)}
@@ -146,84 +268,108 @@ const GradesPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {students.map((student, studentIndex) => (
-                                <tr key={student.id}>
-                                    <td className="student-col-unified">{student.lastName}, {student.firstName}</td>
-                                    {evaluations.map((ev, evIndex) => (
-                                        <React.Fragment key={`${student.id}-${ev.id}`}>
-                                            {activities[ev.id]?.map((act, actIndex) => {
-                                                const score = getStudentGrade(student.id, act.id);
-                                                const columnId = `${evIndex}-${actIndex}`;
-                                                return (
-                                                    <td key={act.id} className="unified-cell-hover">
-                                                        <div className="cell-input-wrapper">
-                                                            <input
-                                                                id={`grade-${student.id}-${act.id}`}
-                                                                type="number"
-                                                                className={`unified-input ${getGradeColorClass(score)}`}
-                                                                defaultValue={score}
-                                                                min="0" max="10" step="0.1"
-                                                                data-student-index={studentIndex}
-                                                                data-column-id={columnId}
-                                                                onFocus={(e) => {
-                                                                    const target = e.target as HTMLInputElement;
-                                                                    // Clear existing value on focus so user can re-enter
-                                                                    if (target.value !== "") {
-                                                                        target.value = "";
-                                                                        target.classList.remove('passing', 'failing');
-                                                                    }
-                                                                }}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === "Enter") {
-                                                                        e.preventDefault();
+                            {students.map((student, studentIndex) => {
+                                let currentColIndex = 0;
+                                return (
+                                    <tr key={student.id}>
+                                        <td
+                                            className="student-col-unified student-name-selectable"
+                                            onClick={() => handleRowSelect(studentIndex)}
+                                        >
+                                            {student.lastName}, {student.firstName}
+                                        </td>
+                                        {evaluations.map((ev, evIndex) => (
+                                            <React.Fragment key={`${student.id}-${ev.id}`}>
+                                                {activities[ev.id]?.map((act, actIndex) => {
+                                                    const score = getStudentGrade(student.id, act.id);
+                                                    const columnId = `${evIndex}-${actIndex}`;
+                                                    const colIdx = currentColIndex;
+                                                    currentColIndex++;
+                                                    const cellSelected = isSelected(studentIndex, colIdx);
+
+                                                    return (
+                                                        <td
+                                                            key={act.id}
+                                                            className={`unified-cell-hover ${cellSelected ? 'cell-selected' : ''}`}
+                                                            onMouseDown={(e) => handleCellMouseDown(studentIndex, colIdx, e)}
+                                                            onMouseEnter={() => handleCellMouseEnter(studentIndex, colIdx)}
+                                                        >
+                                                            <div className="cell-input-wrapper">
+                                                                <input
+                                                                    id={`grade-${student.id}-${act.id}`}
+                                                                    type="number"
+                                                                    className={`unified-input ${getGradeColorClass(score)}`}
+                                                                    defaultValue={score}
+                                                                    min="0" max="10" step="0.1"
+                                                                    data-student-index={studentIndex}
+                                                                    data-column-id={columnId}
+                                                                    onFocus={(e) => {
                                                                         const target = e.target as HTMLInputElement;
-
-                                                                        // Save the grade
-                                                                        handleGradeChange(student.id, act.id, target.value);
-
-                                                                        // Update visual feedback
-                                                                        const numValue = parseFloat(target.value);
-                                                                        target.classList.remove('passing', 'failing');
-                                                                        if (!isNaN(numValue)) {
-                                                                            target.classList.add(numValue < 6 ? 'failing' : 'passing');
+                                                                        if (target.value !== "") {
+                                                                            target.value = "";
+                                                                            target.classList.remove('passing', 'failing');
                                                                         }
+                                                                    }}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === "Enter") {
+                                                                            e.preventDefault();
+                                                                            const target = e.target as HTMLInputElement;
 
-                                                                        // Auto-advance to next cell in the same column
-                                                                        const currentStudentIndex = parseInt(target.dataset.studentIndex || "0");
-                                                                        const colId = target.dataset.columnId;
-                                                                        const nextStudentIndex = currentStudentIndex + 1;
+                                                                            handleGradeChange(student.id, act.id, target.value);
 
-                                                                        const nextInput = document.querySelector(
-                                                                            `input[data-student-index="${nextStudentIndex}"][data-column-id="${colId}"]`
-                                                                        ) as HTMLInputElement;
+                                                                            const numValue = parseFloat(target.value);
+                                                                            target.classList.remove('passing', 'failing');
+                                                                            if (!isNaN(numValue)) {
+                                                                                target.classList.add(numValue < 6 ? 'failing' : 'passing');
+                                                                            }
 
-                                                                        if (nextInput) {
-                                                                            nextInput.focus();
-                                                                        } else {
-                                                                            // Last student - blur the current cell
-                                                                            target.blur();
+                                                                            const currentStudentIndex = parseInt(target.dataset.studentIndex || "0");
+                                                                            const colId = target.dataset.columnId;
+                                                                            const nextStudentIndex = currentStudentIndex + 1;
+
+                                                                            const nextInput = document.querySelector(
+                                                                                `input[data-student-index="${nextStudentIndex}"][data-column-id="${colId}"]`
+                                                                            ) as HTMLInputElement;
+
+                                                                            if (nextInput) {
+                                                                                nextInput.focus();
+                                                                            } else {
+                                                                                target.blur();
+                                                                            }
                                                                         }
-                                                                    }
-                                                                }}
-                                                                onBlur={(e) => handleGradeChange(student.id, act.id, e.target.value)}
-                                                            />
-                                                        </div>
-                                                    </td>
-                                                );
-                                            })}
-                                            <td style={{ backgroundColor: '#fafafa' }}></td>
-                                        </React.Fragment>
-                                    ))}
-                                    <td className="total-cell-unified">
-                                        {/* Total calculation placeholder */}
-                                        -
-                                    </td>
-                                </tr>
-                            ))}
+                                                                    }}
+                                                                    onBlur={(e) => handleGradeChange(student.id, act.id, e.target.value)}
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                    );
+                                                })}
+                                                {/* Plus column - increment currentColIndex but not selectable */}
+                                                <td
+                                                    style={{ backgroundColor: '#fafafa' }}
+                                                    onMouseDown={() => {/* not selectable */ }}
+                                                >
+                                                    {(() => { currentColIndex++; return null; })()}
+                                                </td>
+                                            </React.Fragment>
+                                        ))}
+                                        <td className="total-cell-unified">
+                                            {/* Total calculation placeholder */}
+                                            -
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            {/* Stats Overlay */}
+            <SelectionStatsOverlay
+                stats={selectionStats}
+                isVisible={selectedCells.size > 0}
+            />
 
             <footer className="unified-footer">
                 <button className="footer-btn-unified" onClick={() => navigate(`/attendance/${subjectId}/${groupId}`)}>Asistencia</button>

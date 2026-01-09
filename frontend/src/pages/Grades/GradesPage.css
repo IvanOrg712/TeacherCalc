@@ -91,3 +91,57 @@
     border-bottom-color: #5c6bc0;
     color: #5c6bc0;
 }
+
+/* =========================
+   Cell Selection Styles
+   ========================= */
+
+/* Prevent text selection during drag */
+.grades-selectable {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Selected cell highlighting */
+.cell-selected {
+    position: relative;
+}
+
+.cell-selected::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(92, 107, 192, 0.18);
+    border: 2px solid rgba(92, 107, 192, 0.5);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.cell-selected .unified-input {
+    position: relative;
+    z-index: 2;
+}
+
+/* Clickable student name for row selection */
+.student-name-selectable {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.student-name-selectable:hover {
+    background-color: #e8eaf6 !important;
+}
+
+/* Clickable activity header for column selection */
+.activity-header-selectable {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.activity-header-selectable:hover {
+    background-color: #e0e3e8 !important;
+}
+
+.activity-header-selectable .vertical-text-wrapper {
+    color: inherit;
+}
