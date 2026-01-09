@@ -1,4 +1,4 @@
-import type { School, Student, Term, Midterm, Evaluation, Activity } from '../types/models';
+import type { School, Student, Term, Midterm, Evaluation, Activity } from '../@types/models';
 
 // --- Mock Students ---
 export const MOCK_STUDENTS: Record<string, Student> = {};

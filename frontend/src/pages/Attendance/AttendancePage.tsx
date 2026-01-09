@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSubject, getGroup, getStudentsForGroup, MOCK_TERMS } from '../../data/mockData';
-import type { Student } from '../../types/models';
+import type { Student } from '../../@types/models';
 import './AttendancePage.css';
 
 const AttendancePage: React.FC = () => {

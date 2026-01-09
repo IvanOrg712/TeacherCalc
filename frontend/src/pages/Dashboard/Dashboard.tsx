@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DashboardLayout from '../../components/DashboardLayout/DashboardLayout';
-import SchoolSection from '../../components/SchoolSection/SchoolSection';
+import DashboardLayout from '../../components/layout/DashboardLayout/DashboardLayout';
+import SchoolSection from '../../components/features/SchoolSection/SchoolSection';
 import { MOCK_SCHOOLS } from '../../data/mockData';
 import './Dashboard.css';
 
