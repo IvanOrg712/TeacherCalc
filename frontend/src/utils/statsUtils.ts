@@ -14,6 +14,7 @@ export interface GradeStats {
     passCount: number;
     failCount: number;
     passRate: number;
+    passingGrade: number; // The threshold used for pass/fail calculation
 }
 
 /**
@@ -80,23 +81,29 @@ export const calculateStdDeviation = (values: number[]): number => {
 };
 
 /**
- * Count passing grades (>= 6)
+ * Count passing grades (>= passingGrade threshold)
+ * @param values - Array of grade values
+ * @param passingGrade - Minimum grade to pass (default: 6)
  */
-export const countPassing = (values: number[]): number => {
-    return values.filter(val => val >= 6).length;
+export const countPassing = (values: number[], passingGrade: number = 6): number => {
+    return values.filter(val => val >= passingGrade).length;
 };
 
 /**
- * Count failing grades (< 6)
+ * Count failing grades (< passingGrade threshold)
+ * @param values - Array of grade values
+ * @param passingGrade - Minimum grade to pass (default: 6)
  */
-export const countFailing = (values: number[]): number => {
-    return values.filter(val => val < 6).length;
+export const countFailing = (values: number[], passingGrade: number = 6): number => {
+    return values.filter(val => val < passingGrade).length;
 };
 
 /**
  * Calculate all statistics for an array of grade values
+ * @param values - Array of grade values
+ * @param passingGrade - Minimum grade to pass (default: 6)
  */
-export const calculateAllStats = (values: number[]): GradeStats => {
+export const calculateAllStats = (values: number[], passingGrade: number = 6): GradeStats => {
     if (values.length === 0) {
         return {
             count: 0,
@@ -109,13 +116,14 @@ export const calculateAllStats = (values: number[]): GradeStats => {
             stdDeviation: 0,
             passCount: 0,
             failCount: 0,
-            passRate: 0
+            passRate: 0,
+            passingGrade
         };
     }
 
     const sum = values.reduce((acc, val) => acc + val, 0);
-    const passCount = countPassing(values);
-    const failCount = countFailing(values);
+    const passCount = countPassing(values, passingGrade);
+    const failCount = countFailing(values, passingGrade);
 
     return {
         count: values.length,
@@ -128,6 +136,7 @@ export const calculateAllStats = (values: number[]): GradeStats => {
         stdDeviation: Math.round(calculateStdDeviation(values) * 100) / 100,
         passCount,
         failCount,
-        passRate: Math.round((passCount / values.length) * 100)
+        passRate: Math.round((passCount / values.length) * 100),
+        passingGrade
     };
 };

@@ -15,7 +15,7 @@ const SelectionStatsOverlay: React.FC<SelectionStatsOverlayProps> = ({ stats, is
     return (
         <div className="stats-overlay">
             <div className="stats-overlay-header">
-                <span className="stats-title">📊 Estadísticas de Selección</span>
+                <span className="stats-title">Estadísticas de Selección</span>
                 <span className="stats-count">{stats.count} celdas</span>
             </div>
 
@@ -57,11 +57,11 @@ const SelectionStatsOverlay: React.FC<SelectionStatsOverlayProps> = ({ stats, is
 
             <div className="stats-pass-fail">
                 <div className="pass-fail-item passing">
-                    <span className="pf-label">Aprobados</span>
+                    <span className="pf-label">Aprobados (≥{stats.passingGrade})</span>
                     <span className="pf-value">{stats.passCount}</span>
                 </div>
                 <div className="pass-fail-item failing">
-                    <span className="pf-label">Reprobados</span>
+                    <span className="pf-label">Reprobados (&lt;{stats.passingGrade})</span>
                     <span className="pf-value">{stats.failCount}</span>
                 </div>
                 <div className="pass-fail-item rate">

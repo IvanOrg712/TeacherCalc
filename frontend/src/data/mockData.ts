@@ -39,13 +39,18 @@ export const MOCK_SCHOOLS: School[] = [
     {
         id: '1',
         name: "Universidad Central",
+        gradingConfig: {
+            passingGrade: 6,
+            maxGrade: 10,
+            gradeScale: 'numeric'
+        },
         subjects: [
             {
                 id: 's1',
                 name: "Matemáticas Discretas",
                 groups: [
                     { id: 'g1', name: "710", studentIds: allStudentIds.slice(0, 10) },
-                    { id: 'g2', name: "711", studentIds: allStudentIds.slice(10, 20) }, // Ivan is here if sliced correctly? No, 0-10 has Ivan.
+                    { id: 'g2', name: "711", studentIds: allStudentIds.slice(10, 20) },
                     { id: 'g3', name: "712", studentIds: allStudentIds.slice(20, 30) }
                 ]
             },
@@ -62,6 +67,11 @@ export const MOCK_SCHOOLS: School[] = [
     {
         id: '2',
         name: "Instituto Politécnico",
+        gradingConfig: {
+            passingGrade: 7,
+            maxGrade: 10,
+            gradeScale: 'numeric'
+        },
         subjects: [
             {
                 id: 's3',
@@ -103,9 +113,9 @@ const seedGradesData = () => {
                     // 2. Create Evaluations for each Midterm
                     // Design implies: Trabajos (Assignments), Proyectos, Examen
                     const evaluationsSpec = [
-                        { name: "Trabajos", weight: 40, activitiesCount: 5, prefix: "Practica" },
-                        { name: "Proyecto", weight: 20, activitiesCount: 1, prefix: "Conclusión" },
-                        { name: "Examen", weight: 40, activitiesCount: 1, prefix: "Listening" } // Using design names loosely
+                        { name: "Trabajos", weight: 40, activitiesCount: 5, prefix: "Practica", maxScore: 10 },
+                        { name: "Proyecto", weight: 20, activitiesCount: 1, prefix: "Conclusión", maxScore: 20 },
+                        { name: "Examen", weight: 40, activitiesCount: 1, prefix: "Listening", maxScore: 100 }
                     ];
 
                     evaluationsSpec.forEach((evalSpec, eIdx) => {
@@ -124,15 +134,16 @@ const seedGradesData = () => {
                                 id: actId,
                                 name: evalSpec.activitiesCount > 1 ? `${evalSpec.prefix} #${a}` : evalSpec.prefix,
                                 evaluationId: evalId,
-                                maxScore: 10
+                                maxScore: evalSpec.maxScore
                             });
 
                             // 4. Generate Grades for Students in Group
                             group.studentIds.forEach(studentId => {
                                 const key = `${studentId}-${actId}`;
-                                // Random score between 0 and 10, mostly high
-                                const randomScore = Math.floor(Math.random() * 4) + 7; // 7-10
-                                MOCK_GRADES[key] = randomScore > 10 ? 10 : randomScore;
+                                // Random score scaled to maxScore, mostly high (70-100% of max)
+                                const percentage = 0.7 + Math.random() * 0.3; // 70-100%
+                                const randomScore = Math.round(evalSpec.maxScore * percentage * 10) / 10;
+                                MOCK_GRADES[key] = Math.min(randomScore, evalSpec.maxScore);
                             });
                         }
                     });
