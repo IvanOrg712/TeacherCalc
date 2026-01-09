@@ -72,7 +72,7 @@ const GradesPage: React.FC = () => {
 
     // Pending selection to handle mode switching synchronization
     const [pendingSelection, setPendingSelection] = useState<{
-        type: 'column' | 'cell';
+        type: 'column' | 'cell' | 'row';
         index?: number; // for column
         row?: number; // for cell
         col?: number; // for cell
@@ -213,6 +213,17 @@ const GradesPage: React.FC = () => {
         }
     }, [handleColumnSelect, selectionMode]);
 
+    // Wrapper for student row select
+    const handleStudentRowSelect = useCallback((rowIndex: number) => {
+        // Force activity mode so that final grades are EXCLUDED from row selection
+        if (selectionMode !== 'activity') {
+            setSelectionMode('activity');
+            setPendingSelection({ type: 'row', index: rowIndex });
+        } else {
+            handleRowSelect(rowIndex);
+        }
+    }, [handleRowSelect, selectionMode]);
+
     // Clear selection and reset mode
     const handleClearSelection = useCallback(() => {
         clearSelection();
@@ -225,6 +236,8 @@ const GradesPage: React.FC = () => {
         if (pendingSelection) {
             if (pendingSelection.type === 'column' && pendingSelection.index !== undefined) {
                 handleColumnSelect(pendingSelection.index);
+            } else if (pendingSelection.type === 'row' && pendingSelection.index !== undefined) {
+                handleRowSelect(pendingSelection.index);
             } else if (pendingSelection.type === 'cell' && pendingSelection.row !== undefined && pendingSelection.col !== undefined) {
                 // Mock event for shift key
                 handleCellMouseDown(pendingSelection.row, pendingSelection.col, { shiftKey: pendingSelection.shiftKey } as React.MouseEvent);
@@ -470,7 +483,7 @@ const GradesPage: React.FC = () => {
                                     <tr key={student.id}>
                                         <td
                                             className="student-col-unified student-name-selectable"
-                                            onClick={() => handleRowSelect(studentIndex)}
+                                            onClick={() => handleStudentRowSelect(studentIndex)}
                                         >
                                             {student.lastName}, {student.firstName}
                                         </td>
