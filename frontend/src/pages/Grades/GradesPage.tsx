@@ -10,7 +10,7 @@ import {
     getStudentGrade,
     updateStudentGrade
 } from '../../data/mockData';
-import type { Student, Midterm, Evaluation, Activity } from '../../types/models';
+import type { Student, Midterm, Evaluation, Activity } from '../../@types/models';
 import './GradesPage.css';
 
 const GradesPage: React.FC = () => {

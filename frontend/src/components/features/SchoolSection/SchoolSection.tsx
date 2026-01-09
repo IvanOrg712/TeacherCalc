@@ -1,5 +1,5 @@
 import ClassCard from '../ClassCard/ClassCard';
-import type { Subject } from '../../types/models';
+import type { Subject } from '../../../@types/models';
 import './SchoolSection.css';
 
 interface SchoolSectionProps {
