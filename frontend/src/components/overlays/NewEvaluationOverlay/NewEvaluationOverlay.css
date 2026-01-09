@@ -1,0 +1,12 @@
+.evaluation-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #666;
+}

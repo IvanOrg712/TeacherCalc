@@ -1,0 +1,12 @@
+.error-content {
+    text-align: center;
+    color: #ef4444;
+}
+
+.error-btn {
+    background-color: #ef4444;
+}
+
+.error-btn:hover {
+    background-color: #dc2626;
+}

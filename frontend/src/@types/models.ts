@@ -7,10 +7,9 @@ export interface Student {
     id: string;
     firstName: string;
     lastName: string; // "Ivan Vivas Garcia"
-    // In a real app we might store attendance in a separate collection,
-    // but for mock purposes, we can keep it here or in a separate map.
-    // Let's store a simple map of date->status for now.
-    attendance: Record<string, boolean>;
+    // In a real app we might store attendance in a separate collection.
+    // attendance: Record<string, boolean>; // Deprecated
+    attendance?: Record<string, boolean>;
 }
 
 export interface Group {
@@ -35,7 +34,10 @@ export interface School {
     id: string;
     name: string; // e.g. "Universidad Tecnológica"
     subjects: Subject[];
-    gradingConfig: GradingConfig; // School-specific grading configuration
+    gradingConfig?: GradingConfig; // School-specific grading configuration
+    // API fields
+    passingGrade?: number;
+    midtermCount?: number;
 }
 
 export interface Teacher {

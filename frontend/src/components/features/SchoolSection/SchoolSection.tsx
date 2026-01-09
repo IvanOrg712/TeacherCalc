@@ -7,12 +7,28 @@ interface SchoolSectionProps {
     subjects: Subject[];
     onAddClass?: () => void;
     onGroupClick?: (subjectId: string, groupId: string) => void;
+    onEditSchool?: () => void;
+    onSubjectContextMenu?: (event: React.MouseEvent, subject: Subject) => void;
 }
 
-const SchoolSection: React.FC<SchoolSectionProps> = ({ schoolName, subjects, onAddClass, onGroupClick }) => {
+const SchoolSection: React.FC<SchoolSectionProps> = ({
+    schoolName,
+    subjects,
+    onAddClass,
+    onGroupClick,
+    onEditSchool,
+    onSubjectContextMenu
+}) => {
     return (
         <div className="school-section">
-            <h2 className="school-name">{schoolName}</h2>
+            <h2
+                className="school-name"
+                onClick={onEditSchool}
+                style={{ cursor: onEditSchool ? 'pointer' : 'default' }}
+                title="Click to edit school"
+            >
+                {schoolName}
+            </h2>
 
             <div className="school-classes-list">
                 {subjects.map((subject) => (
@@ -21,6 +37,7 @@ const SchoolSection: React.FC<SchoolSectionProps> = ({ schoolName, subjects, onA
                         name={subject.name}
                         sections={subject.groups}
                         onSectionClick={(groupId) => onGroupClick?.(subject.id, groupId)}
+                        onCardContextMenu={(e) => onSubjectContextMenu?.(e, subject)}
                     />
                 ))}
 

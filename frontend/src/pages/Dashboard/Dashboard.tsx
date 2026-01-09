@@ -1,40 +1,163 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout/DashboardLayout';
 import SchoolSection from '../../components/features/SchoolSection/SchoolSection';
-import { MOCK_SCHOOLS } from '../../data/mockData';
+import SchoolConfigOverlay from '../../components/overlays/SchoolConfigOverlay/SchoolConfigOverlay';
+import SubjectConfigOverlay from '../../components/overlays/SubjectConfigOverlay/SubjectConfigOverlay';
+import ErrorOverlay from '../../components/overlays/ErrorOverlay/ErrorOverlay';
+import ContextMenu from '../../components/common/ContextMenu/ContextMenu';
 import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
 
-    // Use centralized mock data
-    // const [schools] = useState(MOCK_SCHOOLS);
-    const [schools, setSchools] = useState<any[]>(MOCK_SCHOOLS); // Fallback to mock for now
+    const [schools, setSchools] = useState<any[]>([]); // Start empty, fetch from API
+    const [isSchoolOverlayOpen, setIsSchoolOverlayOpen] = useState(false);
+    const [selectedSchool, setSelectedSchool] = useState<any>(null);
 
-    React.useEffect(() => {
-        const fetchSchools = async () => {
-            try {
-                // Dynamic import to avoid circular dependencies if any, or just standard import
-                const { default: api } = await import('../../api/client');
-                const response = await api.get('/v1/schools/');
-                console.log("Fetched Schools:", response.data);
-                // If we had real data, we would setSchools(response.data);
-            } catch (error) {
-                console.error("Error fetching schools:", error);
-            }
-        };
+    // Subject Overlay State
+    const [isSubjectOverlayOpen, setIsSubjectOverlayOpen] = useState(false);
+    const [selectedSchoolIdForSubject, setSelectedSchoolIdForSubject] = useState<string | null>(null);
+    const [selectedSubject, setSelectedSubject] = useState<any>(null);
+    const [errorMessage, setErrorMessage] = useState<string>('');
+    const [isErrorOpen, setIsErrorOpen] = useState(false);
+
+    // Context Menu State
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; subject: any; schoolId: string } | null>(null);
+
+    const showError = (msg: string) => {
+        setErrorMessage(msg);
+        setIsErrorOpen(true);
+    };
+
+    const fetchSchools = async () => {
+        try {
+            const { default: api } = await import('../../api/client');
+            const response = await api.get('/v1/schools/');
+            // Map API data to Frontend Model
+            const mappedSchools = response.data.map((s: any) => ({
+                id: s.id,
+                name: s.name,
+                passingGrade: Number(s.passing_grade),
+                midtermCount: s.midterm_count,
+                subjects: s.subjects || [], // Nested Serializer should provide this
+                gradingConfig: { // Backwards compat if needed by other components
+                    passingGrade: Number(s.passing_grade),
+                    maxGrade: 10,
+                    gradeScale: 'numeric'
+                }
+            }));
+            setSchools(mappedSchools);
+        } catch (error) {
+            console.error("Error fetching schools:", error);
+            showError("Error fetching schools. Please try again.");
+        }
+    };
+
+    useEffect(() => {
         fetchSchools();
     }, []);
 
     const handleAddSchool = () => {
-        console.log("Add School Clicked");
-        // Logic to add school would go here
+        setSelectedSchool(null);
+        setIsSchoolOverlayOpen(true);
+    };
+
+    const handleEditSchool = (school: any) => {
+        setSelectedSchool(school);
+        setIsSchoolOverlayOpen(true);
+    };
+
+    const handleSaveSchool = async (data: { name: string; passingGrade: number; midtermCount: number }) => {
+        try {
+            const { default: api } = await import('../../api/client');
+            const payload = {
+                name: data.name,
+                passing_grade: data.passingGrade,
+                midterm_count: data.midtermCount
+            };
+
+            if (selectedSchool) {
+                await api.put(`/v1/schools/${selectedSchool.id}/`, payload);
+            } else {
+                await api.post('/v1/schools/', payload);
+            }
+
+            setIsSchoolOverlayOpen(false);
+            fetchSchools(); // Refresh list
+        } catch (error) {
+            console.error("Error saving school:", error);
+            showError("Failed to save school.");
+        }
     };
 
     const handleAddSubject = (schoolId: string) => {
-        console.log(`Add Subject clicked for School ID: ${schoolId}`);
-        // Logic to add subject would go here
+        setSelectedSchoolIdForSubject(schoolId);
+        setSelectedSubject(null); // Clear any previous selection
+        setIsSubjectOverlayOpen(true);
+    };
+
+    const handleEditSubject = (subject: any, schoolId: string) => {
+        setSelectedSchoolIdForSubject(schoolId);
+        setSelectedSubject(subject);
+        setIsSubjectOverlayOpen(true);
+        setContextMenu(null); // Close context menu
+    };
+
+    const handleSubjectContextMenu = (event: React.MouseEvent, subject: any, schoolId: string) => {
+        event.preventDefault();
+        setContextMenu({
+            x: event.clientX,
+            y: event.clientY,
+            subject,
+            schoolId
+        });
+    };
+
+    const handleSaveSubject = async (data: { name: string; absencesAllowed: number; groupCount: number; groupNames: string }) => {
+        if (!selectedSchoolIdForSubject) return;
+
+        try {
+            const { default: api } = await import('../../api/client');
+            // Create array of group objects
+            const groupNameList = data.groupNames.split(',').map(n => n.trim()).filter(n => n.length > 0);
+            const groups = groupNameList.map(name => ({ name }));
+
+            const payload = {
+                name: data.name,
+                school: selectedSchoolIdForSubject,
+                absences_allowed: data.absencesAllowed,
+                groups: groups
+            };
+
+            if (selectedSubject) {
+                // Update existing subject
+                await api.put(`/v1/subjects/${selectedSubject.id}/`, payload);
+            } else {
+                // Create new subject
+                await api.post('/v1/subjects/', payload);
+            }
+
+            setIsSubjectOverlayOpen(false);
+            setSelectedSubject(null);
+            fetchSchools(); // Refresh list
+        } catch (error) {
+            console.error("Error saving subject:", error);
+            showError("Failed to save subject.");
+        }
+    };
+
+    const handleDeleteSubject = async (subjectId: string) => {
+        try {
+            const { default: api } = await import('../../api/client');
+            await api.delete(`/v1/subjects/${subjectId}/`);
+            setIsSubjectOverlayOpen(false);
+            setSelectedSubject(null);
+            fetchSchools(); // Refresh list
+        } catch (error) {
+            console.error("Error deleting subject:", error);
+            showError("Failed to delete subject.");
+        }
     };
 
     const handleGroupClick = (subjectId: string, groupId: string) => {
@@ -51,12 +174,60 @@ const Dashboard: React.FC = () => {
                         subjects={school.subjects} // Passing the structured data
                         onAddClass={() => handleAddSubject(school.id)}
                         onGroupClick={handleGroupClick}
+                        onEditSchool={() => handleEditSchool(school)}
+                        onSubjectContextMenu={(e, subject) => handleSubjectContextMenu(e, subject, school.id)}
                     />
                 ))}
 
                 <button className="add-school-btn" onClick={handleAddSchool}>
                     + Escuela
                 </button>
+
+                <SchoolConfigOverlay
+                    isOpen={isSchoolOverlayOpen}
+                    onClose={() => setIsSchoolOverlayOpen(false)}
+                    onSave={handleSaveSchool}
+                    initialData={selectedSchool}
+                />
+
+                <SubjectConfigOverlay
+                    isOpen={isSubjectOverlayOpen}
+                    onClose={() => {
+                        setIsSubjectOverlayOpen(false);
+                        setSelectedSubject(null);
+                    }}
+                    onSave={handleSaveSubject}
+                    initialData={selectedSubject}
+                />
+
+                <ErrorOverlay
+                    isOpen={isErrorOpen}
+                    onClose={() => setIsErrorOpen(false)}
+                    message={errorMessage}
+                />
+
+                {contextMenu && (
+                    <ContextMenu
+                        x={contextMenu.x}
+                        y={contextMenu.y}
+                        onClose={() => setContextMenu(null)}
+                        options={[
+                            {
+                                label: 'Editar Materia',
+                                onClick: () => handleEditSubject(contextMenu.subject, contextMenu.schoolId)
+                            },
+                            {
+                                label: 'Eliminar Materia',
+                                onClick: () => {
+                                    if (contextMenu.subject.id) {
+                                        handleDeleteSubject(contextMenu.subject.id);
+                                    }
+                                },
+                                danger: true
+                            }
+                        ]}
+                    />
+                )}
             </div>
         </DashboardLayout>
     );

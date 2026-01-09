@@ -45,8 +45,8 @@
 .unified-header-main {
     background-color: var(--table-header-bg);
     color: var(--table-header-color);
-    padding: 0 24px;
-    /* Match student column padding */
+    padding: 0 40px;
+    /* Increased horizontal padding for better spacing */
     height: 40px;
     font-weight: 500;
     border-color: #555;

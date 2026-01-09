@@ -5,12 +5,20 @@ interface ClassCardProps {
     name: string;
     sections: { id: string; name: string }[];
     onSectionClick?: (sectionId: string) => void;
+    onCardContextMenu?: (event: React.MouseEvent) => void;
 }
 
-const ClassCard: React.FC<ClassCardProps> = ({ name, sections, onSectionClick }) => {
+const ClassCard: React.FC<ClassCardProps> = ({ name, sections, onSectionClick, onCardContextMenu }) => {
     return (
-        <div className="class-card">
-            <div className="class-name">{name}</div>
+        <div
+            className="class-card"
+            onContextMenu={onCardContextMenu}
+            style={{ cursor: onCardContextMenu ? 'context-menu' : 'default' }}
+            title={onCardContextMenu ? 'Right-click to edit subject' : ''}
+        >
+            <div className="class-name">
+                {name}
+            </div>
             <div className="class-sections">
                 {sections.map((section) => (
                     <button
