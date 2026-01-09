@@ -107,19 +107,47 @@
     position: relative;
 }
 
-.cell-selected::before {
+/* Selection overlay that works over filled cells */
+.cell-selected .cell-input-wrapper {
+    position: relative;
+}
+
+.cell-selected .cell-input-wrapper::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(92, 107, 192, 0.18);
-    border: 2px solid rgba(92, 107, 192, 0.5);
+    background: rgba(92, 107, 192, 0.25);
+    border: 2px solid rgba(92, 107, 192, 0.6);
     pointer-events: none;
-    z-index: 1;
+    z-index: 10;
 }
 
-.cell-selected .unified-input {
+/* Override passing/failing backgrounds when selected */
+.cell-selected .unified-input.passing,
+.cell-selected .unified-input.failing {
     position: relative;
-    z-index: 2;
+}
+
+/* Read-only style for grade inputs (until activated) */
+.unified-input.grade-readonly {
+    cursor: pointer;
+    caret-color: transparent;
+}
+
+.unified-input.grade-readonly:focus {
+    background-color: transparent;
+    box-shadow: none;
+}
+
+/* Active editing mode */
+.unified-input.grade-editing {
+    cursor: text;
+    caret-color: auto;
+}
+
+.unified-input.grade-editing:focus {
+    background-color: #e8eaf6 !important;
+    box-shadow: inset 0 0 0 2px #5c6bc0 !important;
 }
 
 /* Clickable student name for row selection */

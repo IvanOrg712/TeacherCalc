@@ -30,6 +30,9 @@ const GradesPage: React.FC = () => {
     const [subjectName, setSubjectName] = useState("Loading...");
     const [groupName, setGroupName] = useState("");
 
+    // Track which cell is currently being edited (null = none)
+    const [editingCell, setEditingCell] = useState<string | null>(null);
+
     // Build a flat column structure for selection logic
     // Each entry: { type: 'activity' | 'plus' | 'final', evalId?, actId?, actIndex?, evIndex? }
     const columnStructure = useMemo(() => {
@@ -146,18 +149,38 @@ const GradesPage: React.FC = () => {
     // Clear selection when midterm changes
     useEffect(() => {
         clearSelection();
+        setEditingCell(null);
     }, [activeMidtermId, clearSelection]);
 
-    // Handle Escape key to clear selection
+    // Handle Escape key to clear selection and exit edit mode
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 clearSelection();
+                setEditingCell(null);
             }
         };
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [clearSelection]);
+
+    // Function to activate editing on a cell
+    const activateEditing = (cellId: string) => {
+        setEditingCell(cellId);
+        // Focus the input after state update
+        setTimeout(() => {
+            const input = document.getElementById(cellId) as HTMLInputElement;
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }, 0);
+    };
+
+    // Function to exit editing mode
+    const exitEditing = () => {
+        setEditingCell(null);
+    };
 
     // Handle mouse up globally to end drag selection
     useEffect(() => {
@@ -293,52 +316,71 @@ const GradesPage: React.FC = () => {
                                                             className={`unified-cell-hover ${cellSelected ? 'cell-selected' : ''}`}
                                                             onMouseDown={(e) => handleCellMouseDown(studentIndex, colIdx, e)}
                                                             onMouseEnter={() => handleCellMouseEnter(studentIndex, colIdx)}
+                                                            onDoubleClick={() => activateEditing(`grade-${student.id}-${act.id}`)}
                                                         >
                                                             <div className="cell-input-wrapper">
                                                                 <input
                                                                     id={`grade-${student.id}-${act.id}`}
                                                                     type="number"
-                                                                    className={`unified-input ${getGradeColorClass(score)}`}
+                                                                    className={`unified-input ${getGradeColorClass(score)} ${editingCell === `grade-${student.id}-${act.id}` ? 'grade-editing' : 'grade-readonly'}`}
                                                                     defaultValue={score}
                                                                     min="0" max="10" step="0.1"
                                                                     data-student-index={studentIndex}
                                                                     data-column-id={columnId}
+                                                                    readOnly={editingCell !== `grade-${student.id}-${act.id}`}
                                                                     onFocus={(e) => {
                                                                         const target = e.target as HTMLInputElement;
-                                                                        if (target.value !== "") {
+                                                                        // Only clear value if in editing mode
+                                                                        if (editingCell === `grade-${student.id}-${act.id}` && target.value !== "") {
                                                                             target.value = "";
                                                                             target.classList.remove('passing', 'failing');
                                                                         }
                                                                     }}
                                                                     onKeyDown={(e) => {
+                                                                        const target = e.target as HTMLInputElement;
+                                                                        const cellId = `grade-${student.id}-${act.id}`;
+
+                                                                        // Enter key: if not editing, activate editing; if editing, save and move to next
                                                                         if (e.key === "Enter") {
                                                                             e.preventDefault();
-                                                                            const target = e.target as HTMLInputElement;
 
-                                                                            handleGradeChange(student.id, act.id, target.value);
-
-                                                                            const numValue = parseFloat(target.value);
-                                                                            target.classList.remove('passing', 'failing');
-                                                                            if (!isNaN(numValue)) {
-                                                                                target.classList.add(numValue < 6 ? 'failing' : 'passing');
-                                                                            }
-
-                                                                            const currentStudentIndex = parseInt(target.dataset.studentIndex || "0");
-                                                                            const colId = target.dataset.columnId;
-                                                                            const nextStudentIndex = currentStudentIndex + 1;
-
-                                                                            const nextInput = document.querySelector(
-                                                                                `input[data-student-index="${nextStudentIndex}"][data-column-id="${colId}"]`
-                                                                            ) as HTMLInputElement;
-
-                                                                            if (nextInput) {
-                                                                                nextInput.focus();
+                                                                            if (editingCell !== cellId) {
+                                                                                // Activate editing on this cell
+                                                                                activateEditing(cellId);
                                                                             } else {
-                                                                                target.blur();
+                                                                                // Save and move to next cell
+                                                                                handleGradeChange(student.id, act.id, target.value);
+
+                                                                                const numValue = parseFloat(target.value);
+                                                                                target.classList.remove('passing', 'failing');
+                                                                                if (!isNaN(numValue)) {
+                                                                                    target.classList.add(numValue < 6 ? 'failing' : 'passing');
+                                                                                }
+
+                                                                                const currentStudentIndex = parseInt(target.dataset.studentIndex || "0");
+                                                                                const colId = target.dataset.columnId;
+                                                                                const nextStudentIndex = currentStudentIndex + 1;
+
+                                                                                const nextInput = document.querySelector(
+                                                                                    `input[data-student-index="${nextStudentIndex}"][data-column-id="${colId}"]`
+                                                                                ) as HTMLInputElement;
+
+                                                                                if (nextInput) {
+                                                                                    // Activate editing on the next cell
+                                                                                    activateEditing(nextInput.id);
+                                                                                } else {
+                                                                                    exitEditing();
+                                                                                    target.blur();
+                                                                                }
                                                                             }
                                                                         }
                                                                     }}
-                                                                    onBlur={(e) => handleGradeChange(student.id, act.id, e.target.value)}
+                                                                    onBlur={(e) => {
+                                                                        if (editingCell === `grade-${student.id}-${act.id}`) {
+                                                                            handleGradeChange(student.id, act.id, e.target.value);
+                                                                            exitEditing();
+                                                                        }
+                                                                    }}
                                                                 />
                                                             </div>
                                                         </td>
