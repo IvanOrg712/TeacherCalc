@@ -66,6 +66,7 @@ export interface Evaluation {
     name: string; // "Trabajos", "Examen"
     midtermId: string;
     weightPercentage: number; // 0-100
+    isFixed: boolean;
 }
 
 export interface Activity {
@@ -73,6 +74,9 @@ export interface Activity {
     name: string; // "Tarea 1"
     evaluationId: string;
     maxScore: number;
+    weightPercentage: number;
+    isFixed: boolean;
+    isExtra: boolean;
 }
 
 export interface Grade {

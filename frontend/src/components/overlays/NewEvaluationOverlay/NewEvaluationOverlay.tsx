@@ -6,12 +6,26 @@ interface NewEvaluationOverlayProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (data: { name: string; isFixed: boolean; weight: number }) => void;
+    initialData?: { name: string; isFixed: boolean; weight: number };
+    isEditing?: boolean;
 }
 
-const NewEvaluationOverlay: React.FC<NewEvaluationOverlayProps> = ({ isOpen, onClose, onSave }) => {
+const NewEvaluationOverlay: React.FC<NewEvaluationOverlayProps> = ({ isOpen, onClose, onSave, initialData, isEditing = false }) => {
     const [name, setName] = useState('');
     const [isFixed, setIsFixed] = useState(false);
     const [weight, setWeight] = useState<string>('');
+
+    React.useEffect(() => {
+        if (isOpen && initialData) {
+            setName(initialData.name);
+            setIsFixed(initialData.isFixed);
+            setWeight(String(initialData.weight));
+        } else if (isOpen) {
+            setName('');
+            setIsFixed(false);
+            setWeight('');
+        }
+    }, [isOpen, initialData]);
 
     const handleSave = () => {
         onSave({
@@ -19,9 +33,6 @@ const NewEvaluationOverlay: React.FC<NewEvaluationOverlayProps> = ({ isOpen, onC
             isFixed,
             weight: isFixed ? Number(weight) : 0
         });
-        setName('');
-        setIsFixed(false);
-        setWeight('');
         onClose();
     };
 

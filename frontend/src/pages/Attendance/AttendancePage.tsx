@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Student } from '../../@types/models';
 import './AttendancePage.css';
@@ -29,6 +29,9 @@ const AttendancePage: React.FC = () => {
     const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
     const [editingStudentName, setEditingStudentName] = useState('');
 
+    // Ref to store input elements for auto-navigation
+    const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+
     // Close context menu on click elsewhere
     useEffect(() => {
         const handleClick = () => setContextMenu(null);
@@ -40,6 +43,37 @@ const AttendancePage: React.FC = () => {
         e.preventDefault();
         setContextMenu({ x: e.pageX, y: e.pageY, type, id, termId, date });
     };
+
+    // Function to find and focus the next empty cell (vertically in same date column)
+    const focusNextEmptyCell = useCallback((currentStudentId: string, currentTermId: string, currentDate: string) => {
+        // Find current student index
+        const currentStudentIndex = students.findIndex(s => s.id === currentStudentId);
+        if (currentStudentIndex === -1) return;
+
+        // Look for next cell vertically (same term and date, next student)
+        // We'll focus the next student's cell regardless of whether it's empty or filled
+        // This allows for faster attendance taking by moving down the column
+        if (currentStudentIndex + 1 < students.length) {
+            const nextStudent = students[currentStudentIndex + 1];
+            const cellKey = `${nextStudent.id}-${currentTermId}-${currentDate}`;
+            const inputElement = inputRefs.current.get(cellKey);
+            if (inputElement) {
+                setTimeout(() => {
+                    inputElement.focus();
+                    inputElement.select();
+                }, 50);
+            }
+        } else {
+            // If we're at the last student, blur the current cell to unselect it
+            const currentCellKey = `${currentStudentId}-${currentTermId}-${currentDate}`;
+            const currentInputElement = inputRefs.current.get(currentCellKey);
+            if (currentInputElement) {
+                setTimeout(() => {
+                    currentInputElement.blur();
+                }, 50);
+            }
+        }
+    }, [students]);
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -175,6 +209,9 @@ const AttendancePage: React.FC = () => {
                     }
                 }
             }));
+
+            // Auto-navigate to next empty cell
+            focusNextEmptyCell(studentId, midtermId, date);
 
         } catch (e) {
             console.error("Update failed", e);
@@ -390,10 +427,18 @@ const AttendancePage: React.FC = () => {
                                             {term.dates.map((date: string, idx: number) => {
                                                 const status = getStatus(student.id, term.id, date);
                                                 const val = status !== null ? String(status) : "";
+                                                const cellKey = `${student.id}-${term.id}-${date}`;
                                                 return (
                                                     <td key={idx} className="unified-cell-hover">
                                                         <div className="cell-input-wrapper">
                                                             <input
+                                                                ref={(el) => {
+                                                                    if (el) {
+                                                                        inputRefs.current.set(cellKey, el);
+                                                                    } else {
+                                                                        inputRefs.current.delete(cellKey);
+                                                                    }
+                                                                }}
                                                                 type="number"
                                                                 className={`unified-input ${val === '1' ? 'passing' : val === '0' ? 'failing' : ''}`}
                                                                 min="0"

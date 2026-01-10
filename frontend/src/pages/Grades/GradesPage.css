@@ -66,30 +66,72 @@
 }
 
 /* Tabs */
-.midterm-tabs {
+/* Vertical Evaluation Button */
+.add-eval-header-btn {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    padding: 10px 4px;
+    background-color: #dcedc8;
+    color: #33691e;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
     display: flex;
-    background-color: white;
-    padding: 0 2rem;
-    border-bottom: 1px solid #e0e0e0;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    transition: background-color 0.2s;
 }
 
-.midterm-tab {
-    padding: 1rem 2rem;
+.add-eval-header-btn:hover {
+    background-color: #c5e1a5;
+}
+
+/* Footer Container */
+.footer-container {
+    display: flex;
+    flex-direction: column;
+    margin-top: auto;
+}
+
+.midterm-tabs-footer {
+    display: flex;
+    background-color: #e0e0e0;
+    padding: 0;
+    border-top: 1px solid #ccc;
+    width: 100%;
+}
+
+.midterm-tab-footer {
+    padding: 0.75rem 1.5rem;
     cursor: pointer;
-    border-bottom: 2px solid transparent;
     font-weight: 500;
     color: #666;
+    background-color: #e0e0e0;
     transition: all 0.2s;
+    flex: 1;
+    /* Equal width */
+    text-align: center;
+    border-right: 1px solid #ccc;
+    /* Separators */
+    margin: 0;
 }
 
-.midterm-tab:hover {
-    background-color: #f9f9f9;
+.midterm-tab-footer:last-child {
+    border-right: none;
+}
+
+.midterm-tab-footer:hover {
+    background-color: #d0d0d0;
     color: #333;
 }
 
-.midterm-tab.active {
-    border-bottom-color: #5c6bc0;
-    color: #5c6bc0;
+.midterm-tab-footer.active {
+    background-color: #9fa8da;
+    /* Lighter tone of blue */
+    color: white;
 }
 
 /* =========================

@@ -222,9 +222,26 @@
     font-weight: bold;
     cursor: pointer;
     min-width: 60px;
+    max-width: 60px;
+    width: 60px;
     /* Match other column widths */
 }
 
 .add-btn-cell:hover {
     background-color: #d0d0d0;
+}
+
+/* Activity columns - constrain width to match button */
+.unified-table thead .unified-header-vertical {
+    min-width: 60px !important;
+    max-width: 60px !important;
+    width: 60px !important;
+}
+
+/* Final grade header styling */
+.unified-table thead .final-header {
+    background-color: var(--table-subheader-bg);
+    min-width: 80px !important;
+    max-width: 80px !important;
+    width: 80px !important;
 }

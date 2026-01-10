@@ -46,10 +46,21 @@ const GradesPage: React.FC = () => {
     // Track which cell is currently being edited (null = none)
     const [editingCell, setEditingCell] = useState<string | null>(null);
 
+    // Evaluation Editing & Context Menu State
+    const [editingEvalId, setEditingEvalId] = useState<string | null>(null);
+    const [evalMenu, setEvalMenu] = useState<{ x: number; y: number; evalId: string } | null>(null);
+
     // Ref for the table container to detect clicks outside
     const tableContainerRef = useRef<HTMLDivElement>(null);
 
     const [loading, setLoading] = useState(false);
+
+    // Close context menu on click elsewhere
+    useEffect(() => {
+        const handleClick = () => setEvalMenu(null);
+        document.addEventListener('click', handleClick);
+        return () => document.removeEventListener('click', handleClick);
+    }, []);
 
     // Fetch Initial Data (Students, Group Info, Midterms)
     useEffect(() => {
@@ -119,7 +130,8 @@ const GradesPage: React.FC = () => {
                     id: String(e.id),
                     name: e.name,
                     midtermId: String(e.midterm),
-                    weightPercentage: Number(e.weight_percentage)
+                    weightPercentage: Number(e.weight_percentage),
+                    isFixed: Boolean(e.is_fixed)
                 }));
                 setEvaluations(mappedEvals);
 
@@ -129,7 +141,10 @@ const GradesPage: React.FC = () => {
                         id: String(a.id),
                         name: a.name,
                         evaluationId: String(e.id),
-                        maxScore: Number(a.max_score || 10) // Default max score
+                        maxScore: Number(a.max_score || 10),
+                        weightPercentage: Number(a.weight_percentage),
+                        isFixed: Boolean(a.is_fixed),
+                        isExtra: Boolean(a.is_extra_points) // Map extra points flag
                     }));
                 });
                 setActivities(actsMap);
@@ -156,26 +171,106 @@ const GradesPage: React.FC = () => {
 
     // Handlers
     const handleAddEvaluation = () => {
+        setEditingEvalId(null);
         setIsEvalOverlayOpen(true);
+    };
+
+    const handleEvaluationContextMenu = (e: React.MouseEvent, evalId: string) => {
+        e.preventDefault();
+        setEvalMenu({ x: e.pageX, y: e.pageY, evalId });
+    };
+
+    const handleEditEvaluation = () => {
+        if (evalMenu) {
+            setEditingEvalId(evalMenu.evalId);
+            setEvalMenu(null);
+            setIsEvalOverlayOpen(true);
+        }
+    };
+
+    const handleDeleteEvaluation = async () => {
+        if (!evalMenu) return;
+        if (!window.confirm("Are you sure you want to delete this evaluation?")) {
+            setEvalMenu(null);
+            return;
+        }
+
+        try {
+            const { default: api } = await import('../../api/client');
+            await api.delete(`/v1/evaluations/${evalMenu.evalId}/`);
+            // Refresh
+            const tempM = activeMidtermId;
+            setActiveMidtermId(null);
+            setTimeout(() => setActiveMidtermId(tempM), 10);
+        } catch (e) {
+            console.error(e);
+            showError("Failed to delete evaluation.");
+        }
+        setEvalMenu(null);
     };
 
     const handleSaveEvaluation = async (data: { name: string; isFixed: boolean; weight: number }) => {
         if (!activeMidtermId) return;
+
+        // Validation: Check total fixed weight
+        let currentFixedWeight = 0;
+        let currentTotalWeight = 0;
+        evaluations.forEach(ev => {
+            if (editingEvalId && ev.id === editingEvalId) return;
+            if (ev.isFixed) currentFixedWeight += ev.weightPercentage;
+            currentTotalWeight += ev.weightPercentage;
+        });
+
+        // 1. Check if sum of fixed weights > 100
+        const newWeight = data.isFixed ? Number(data.weight) : 0;
+        if (currentFixedWeight + newWeight > 100) {
+            showError("Total fixed weight cannot exceed 100%.");
+            return;
+        }
+
+        // 2. Check if adding new when already 100% total (and not replacing logic)
+        // If currentTotal (fixed + auto) is 100%, and we add a new one... 
+        // Logic: If automatic exists, it shrinks. If all fixed = 100%, we can't add another fixed > 0 or auto.
+        // If currentFixedWeight == 100, we can't add anything with weight > 0 or even auto (0 weight?).
+        if (currentFixedWeight >= 100 && newWeight > 0) {
+            showError("Fixed weights already sum to 100%. Cannot add more weight.");
+            return;
+        }
+
+        // If adding automatic, check if fixed is 100
+        if (!data.isFixed && currentFixedWeight >= 100) {
+            alert("Warning: Fixed weights sum to 100%. This evaluation will have 0% weight.");
+        }
+
+
         try {
             const { default: api } = await import('../../api/client');
-            await api.post('/v1/evaluations/', {
-                midterm: activeMidtermId,
-                name: data.name,
-                is_fixed: data.isFixed,
-                weight_percentage: data.weight
-            });
+
+            if (editingEvalId) {
+                await api.put(`/v1/evaluations/${editingEvalId}/`, {
+                    midterm: activeMidtermId,
+                    name: data.name,
+                    is_fixed: data.isFixed,
+                    weight_percentage: data.isFixed ? data.weight : 0
+                });
+            } else {
+                await api.post('/v1/evaluations/', {
+                    midterm: activeMidtermId,
+                    name: data.name,
+                    is_fixed: data.isFixed,
+                    weight_percentage: data.weight
+                });
+            }
+
             setIsEvalOverlayOpen(false);
+            setEditingEvalId(null);
             // Refresh
             const tempM = activeMidtermId;
             setActiveMidtermId(null);
-            setTimeout(() => setActiveMidtermId(tempM), 10); // Trigger refresh hack or refactor to fetch function
+            setTimeout(() => setActiveMidtermId(tempM), 10);
         } catch (error) {
             console.error(error);
+            showError("Failed to save evaluation.");
         }
     };
 
@@ -186,10 +281,39 @@ const GradesPage: React.FC = () => {
 
     const handleSaveActivity = async (data: any) => {
         if (!targetEvalIdForActivity) return;
+
+        // Weight Validation Logic
+        const currentActs = activities[targetEvalIdForActivity] || [];
+        let currentFixedWeight = 0;
+        currentActs.forEach(a => {
+            if (a.isFixed) currentFixedWeight += a.weightPercentage;
+        });
+
+        const newWeight = (data.isFixed || data.isExtra) ? Number(data.weight) : 0;
+
+        // Skip check for extra points? "This activity won't be included in the calculation of the final grade" implies it's outside 100%.
+        // "Suppose we have an extra activity worth 10%... Student grade 9/10 + 10% = 10."
+        // So extra points do NOT count towards the 100% sum limit of the evaluation weights breakdown?
+        // Prompt check: "sum... must be 100%... system will warn...".
+        // Usually Extra Points are additive, so they don't consume the 100% pie.
+        // I will assume Extra Points are EXCLUDED from the 100% sum check.
+
+        if (!data.isExtra) {
+            if (data.isFixed) {
+                if (currentFixedWeight + newWeight > 100) {
+                    showError("Total fixed weight cannot exceed 100%.");
+                    return;
+                }
+            } else {
+                if (currentFixedWeight >= 100) {
+                    alert("Warning: Fixed weights sum to 100%. This activity will have 0% weight.");
+                }
+            }
+        }
+
         try {
             const { default: api } = await import('../../api/client');
-            // Parse scale "0/30" => max_score=30?
-            // Assuming max_score is derived or passed directly. For now default 10 or parse.
+
             let maxScore = 10;
             if (data.scale && data.scale.includes('/')) {
                 maxScore = Number(data.scale.split('/')[1]);
@@ -197,23 +321,28 @@ const GradesPage: React.FC = () => {
                 maxScore = Number(data.scale);
             }
 
+            // Extra points logic: "Force fixed weight checkbox to be checked".
+            // Overlay handles UI? "If it is, system will force fixed weight..."
+            // Data coming from overlay `data` should have `isFixed: true` if `isExtra: true`.
+
             await api.post('/v1/activities/', {
                 evaluation: targetEvalIdForActivity,
                 name: data.name,
                 description: data.description,
-                is_fixed: data.isFixed,
+                is_fixed: data.isFixed || data.isExtra, // Force fixed if extra
                 weight_percentage: data.weight,
                 max_score: maxScore,
                 is_extra_points: data.isExtra
             });
 
             setIsActivityOverlayOpen(false);
-            // Refresh logic (simple toggle for now)
+            // Refresh logic
             const tempM = activeMidtermId;
             setActiveMidtermId(null);
             setTimeout(() => setActiveMidtermId(tempM), 10);
         } catch (error) {
             console.error(error);
+            showError("Failed to save activity.");
         }
     };
 
@@ -302,25 +431,86 @@ const GradesPage: React.FC = () => {
                 const evActivities = activities[ev.id] || [];
                 if (evActivities.length === 0) return;
 
-                let evalSum = 0;
-                let evalCount = 0;
-                evActivities.forEach(act => {
+                // Separate fixed (including extra) and automatic activities
+                const fixedActs = evActivities.filter(a => a.isFixed);
+                const autoActs = evActivities.filter(a => !a.isFixed);
+
+                let currentWeightUsed = 0;
+                fixedActs.forEach(a => currentWeightUsed += a.weightPercentage);
+
+                // Calculate weight for automatic activities
+                // Remaining weight divided by count of automatic activities
+                let autoWeight = 0;
+                if (autoActs.length > 0) {
+                    autoWeight = Math.max(0, (100 - currentWeightUsed) / autoActs.length);
+                }
+
+                let evalGrade = 0; // Final grade for this evaluation (0-10 scale)
+
+                // We need to sum (score * weight) for all activities
+                // Normalizing score to 0-1 (percentage of maxScore) then multiply by weightPercentage (0-100)
+                // Result is contribution to grade (0-100 scale within evaluation)
+
+                let totalContribution = 0; // Sum of (grade/max * weight)
+                let totalWeightProcessed = 0;
+
+                // Helper to process activity
+                const processActivity = (act: any, weight: number) => {
                     const gradeData = gradesMap[student.id]?.[act.id];
                     if (gradeData) {
-                        const normalizedGrade = (gradeData.score / act.maxScore) * gradingConfig.maxGrade;
-                        evalSum += normalizedGrade;
-                        evalCount++;
+                        const scoreRatio = gradeData.score / act.maxScore; // 0 to 1
+                        // Contribution is Ratio * Weight. 
+                        // E.g. 9/10 * 10% = 0.9 points out of 100 total evaluation points
+                        totalContribution += scoreRatio * weight;
+                    }
+                    // If no grade, contribution is 0 (assumed 0 or missing)
+                    // Logic: "Final grade will be sum of products..."
+                    if (!act.isExtra) {
+                        totalWeightProcessed += weight;
+                    }
+                };
+
+                // Process Fixed (Normal)
+                fixedActs.filter(a => !a.isExtra).forEach(a => processActivity(a, a.weightPercentage));
+
+                // Process Automatic
+                autoActs.forEach(a => processActivity(a, autoWeight));
+
+                // Calculate Base Grade (before Extra)
+                // If total weights sum to 100, `totalContribution` is the grade on 0-100 scale.
+                // We want result on `gradingConfig.maxGrade` scale (e.g. 10).
+                // So (TotalContrib / 100) * MaxGrade
+
+                let currentScore100 = totalContribution; // 0-100
+
+                // Process Extra Points
+                // "Only matter... if student doesn't have max grade"
+                // Logic: Add extra points purely to the score? 
+                // Ex: "Student has 9/10, extra is 10/10 worth 10%. Final is 10."
+                // 9/10 is 90 points. Extra is 10% => 10 points. 90+10 = 100.
+
+                fixedActs.filter(a => a.isExtra).forEach(a => {
+                    const gradeData = gradesMap[student.id]?.[a.id];
+                    if (gradeData) {
+                        const scoreRatio = gradeData.score / a.maxScore;
+                        const extraPoints = scoreRatio * a.weightPercentage;
+                        currentScore100 += extraPoints;
                     }
                 });
 
-                if (evalCount > 0) {
-                    const evalAverage = evalSum / evalCount;
-                    totalWeightedScore += evalAverage * (ev.weightPercentage / 100);
-                    totalWeight += ev.weightPercentage / 100;
-                }
+                // Cap at 100% (Implied by "Final grade will be 10" max)
+                currentScore100 = Math.min(currentScore100, 100);
+
+                // Convert to Grade Scale
+                const finalEvalGrade = (currentScore100 / 100) * gradingConfig.maxGrade;
+
+                // Add to Total Midterm
+                totalWeightedScore += finalEvalGrade * (ev.weightPercentage / 100);
+                totalWeight += ev.weightPercentage / 100;
             });
 
             if (totalWeight === 0) return undefined;
+            // Round to 2 decimals
             return Math.round((totalWeightedScore / totalWeight) * 100) / 100;
         });
     }, [students, evaluations, activities, gradesMap, gradingConfig]);
@@ -364,19 +554,8 @@ const GradesPage: React.FC = () => {
                     <h1>{subjectName}</h1>
                 </div>
 
-                <div className="grades-actions">
-                    <button className="add-eval-btn" onClick={handleAddEvaluation}>+ Evaluación</button>
-                    <div className="grades-group">Grupo {groupName}</div>
-                </div>
+                <div className="grades-group">Grupo {groupName}</div>
             </header>
-
-            <div className="midterm-tabs">
-                {midterms.map(midterm => (
-                    <div key={midterm.id} className={`midterm-tab ${activeMidtermId === midterm.id ? 'active' : ''}`} onClick={() => setActiveMidtermId(midterm.id)}>
-                        {midterm.name}
-                    </div>
-                ))}
-            </div>
 
             <div className="grades-content">
                 <div ref={tableContainerRef} className="unified-table-container">
@@ -386,11 +565,22 @@ const GradesPage: React.FC = () => {
                                 <tr>
                                     <th rowSpan={2} className="student-col-unified">Nombre del Estudiante</th>
                                     {evaluations.map(ev => (
-                                        <th key={ev.id} colSpan={(activities[ev.id]?.length || 0) + 1} className="unified-header-main">
+                                        <th key={ev.id}
+                                            colSpan={(activities[ev.id]?.length || 0) + 1}
+                                            className="unified-header-main"
+                                            onContextMenu={(e) => handleEvaluationContextMenu(e, ev.id)}
+                                            style={{ cursor: 'context-menu' }}
+                                            title="Right-click to edit/delete"
+                                        >
                                             {ev.name} ({ev.weightPercentage}%)
                                         </th>
                                     ))}
-                                    <th rowSpan={2} className="unified-header-vertical">Final</th>
+                                    <th rowSpan={2} className="unified-header-vertical">
+                                        <div className="add-eval-header-btn" onClick={handleAddEvaluation}>+ Evaluación</div>
+                                    </th>
+                                    <th rowSpan={2} className="unified-header-vertical final-header">
+                                        <div className="vertical-text-wrapper">Final</div>
+                                    </th>
                                 </tr>
                                 <tr>
                                     {evaluations.map((ev, evIdx) => (
@@ -424,7 +614,7 @@ const GradesPage: React.FC = () => {
                                                                 className={`unified-cell-hover ${isSelectedCell ? 'cell-selected' : ''}`}
                                                                 onMouseDown={(e) => handleCellSelect(sIdx, currentCIdx, e)}
                                                                 onMouseEnter={() => handleCellMouseEnter(sIdx, currentCIdx)}
-                                                                onDoubleClick={() => setEditingCell(`${student.id}-${act.id}`)}
+                                                                onClick={() => setEditingCell(`${student.id}-${act.id}`)}
                                                             >
                                                                 <div className="cell-input-wrapper">
                                                                     <input
@@ -433,8 +623,20 @@ const GradesPage: React.FC = () => {
                                                                         value={score ?? ''}
                                                                         readOnly={editingCell !== `${student.id}-${act.id}`}
                                                                         onChange={(e) => {
-                                                                            // Local update only visually if needed, but here dependent on map
-                                                                            // Real app: update local state, debounce save
+                                                                            const newValue = e.target.value;
+                                                                            const numValue = parseFloat(newValue);
+                                                                            if (newValue === '' || (!isNaN(numValue) && numValue >= 0 && numValue <= act.maxScore)) {
+                                                                                setGradesMap(prev => ({
+                                                                                    ...prev,
+                                                                                    [student.id]: {
+                                                                                        ...prev[student.id],
+                                                                                        [act.id]: { 
+                                                                                            id: prev[student.id]?.[act.id]?.id || 0, 
+                                                                                            score: numValue || 0 
+                                                                                        }
+                                                                                    }
+                                                                                }));
+                                                                            }
                                                                         }}
                                                                         onBlur={(e) => {
                                                                             handleGradeChange(student.id, act.id, e.target.value, act.maxScore);
@@ -451,7 +653,7 @@ const GradesPage: React.FC = () => {
                                                             </td>
                                                         );
                                                     })}
-                                                    <td style={{ backgroundColor: '#fafafa' }}>{(() => { cIdx++; return null; })()}</td>
+                                                    <td className="add-btn-cell" style={{ backgroundColor: '#e0e0e0' }}>{(() => { cIdx++; return null; })()}</td>
                                                 </React.Fragment>
                                             ))}
                                             <td className="total-cell-unified">
@@ -466,16 +668,54 @@ const GradesPage: React.FC = () => {
                 </div>
             </div>
 
-            <footer className="unified-footer">
-                <button className="footer-btn-unified" onClick={() => navigate(`/attendance/${subjectId}/${groupId}`)}>Asistencia</button>
-                <button className="footer-btn-unified active">Calificaciones</button>
-            </footer>
+            <div className="footer-container">
+                <div className="midterm-tabs-footer">
+                    {midterms.map(midterm => (
+                        <div key={midterm.id} className={`midterm-tab-footer ${activeMidtermId === midterm.id ? 'active' : ''}`} onClick={() => setActiveMidtermId(midterm.id)}>
+                            {midterm.name}
+                        </div>
+                    ))}
+                </div>
+                <footer className="unified-footer">
+                    <button className="footer-btn-unified" onClick={() => navigate(`/attendance/${subjectId}/${groupId}`)}>Asistencia</button>
+                    <button className="footer-btn-unified active">Calificaciones</button>
+                </footer>
+            </div>
 
             <NewEvaluationOverlay
                 isOpen={isEvalOverlayOpen}
                 onClose={() => setIsEvalOverlayOpen(false)}
                 onSave={handleSaveEvaluation}
+                initialData={editingEvalId ? evaluations.find(e => e.id === editingEvalId)?.weightPercentage ? {
+                    name: evaluations.find(e => e.id === editingEvalId)!.name,
+                    isFixed: true, // Assuming if editing we enable fixed? Re-fetch needed for accuracy?
+                    // Actually we don't have isFixed in frontend model for Evals yet... 
+                    // Best effort: set weight
+                    weight: evaluations.find(e => e.id === editingEvalId)!.weightPercentage
+                } : undefined : undefined}
+            // isEditing prop is just visual helpers if needed
             />
+
+            {evalMenu && (
+                <div
+                    className="context-menu-unified"
+                    style={{ top: evalMenu.y, left: evalMenu.x }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="context-menu-item-unified" onClick={() => {
+                        handleEditEvaluation();
+                        setEvalMenu(null);
+                    }}>
+                        Editar Evaluación
+                    </div>
+                    <div className="context-menu-item-unified danger" onClick={() => {
+                        handleDeleteEvaluation();
+                        setEvalMenu(null);
+                    }}>
+                        Eliminar Evaluación
+                    </div>
+                </div>
+            )}
 
             <NewActivityOverlay
                 isOpen={isActivityOverlayOpen}
