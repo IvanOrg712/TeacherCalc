@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Student } from '../../@types/models';
 import './AttendancePage.css';
@@ -29,18 +29,112 @@ const AttendancePage: React.FC = () => {
     const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
     const [editingStudentName, setEditingStudentName] = useState('');
 
+    // Edit Date State
+    const [editingDate, setEditingDate] = useState<{ termId: string; oldDate: string } | null>(null);
+    const [newDate, setNewDate] = useState('');
+    const [isAddingColumn, setIsAddingColumn] = useState(false);
+
+    // Multi-selection State
+    const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set()); // Format: "termId|timestamp"
+    const [isSelecting, setIsSelecting] = useState(false);
+    const [selectionStart, setSelectionStart] = useState<string | null>(null);
+
+    // Flattened list of all dates for range calculation
+    const allDateColumns = useMemo(() => {
+        return terms.flatMap(t => t.dates.map((d: string) => ({
+            termId: t.id,
+            date: d,
+            key: `${t.id}|${d}`
+        })));
+    }, [terms]);
+
+    // Clean up selection state on global mouse up
+    useEffect(() => {
+        const handleGlobalMouseUp = () => {
+            setIsSelecting(false);
+            setSelectionStart(null);
+        };
+        document.addEventListener('mouseup', handleGlobalMouseUp);
+        return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+    }, []);
+
     // Ref to store input elements for auto-navigation
     const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
     // Close context menu on click elsewhere
     useEffect(() => {
-        const handleClick = () => setContextMenu(null);
+        const handleClick = (e: MouseEvent) => {
+            // Don't clear selection if clicking on a header (handled by toggle)
+            if ((e.target as HTMLElement).closest('.unified-header-vertical')) return;
+
+            // Clear selection on outside click if not right-clicking
+            if (e.button !== 2) {
+                setContextMenu(null);
+                // If clicking outside the table completely, clear selection
+                if (!(e.target as HTMLElement).closest('.unified-table')) {
+                    setSelectedDates(new Set());
+                }
+            } else {
+                setContextMenu(null);
+            }
+        };
         document.addEventListener('click', handleClick);
         return () => document.removeEventListener('click', handleClick);
     }, []);
 
+    const handleHeaderMouseDown = (termId: string, timestamp: string) => {
+        const key = `${termId}|${timestamp}`;
+        setIsSelecting(true);
+        setSelectionStart(key);
+        setSelectedDates(new Set([key]));
+    };
+
+    const handleHeaderMouseEnter = (termId: string, timestamp: string) => {
+        if (!isSelecting || !selectionStart) return;
+
+        const currentKey = `${termId}|${timestamp}`;
+        if (currentKey === selectionStart) {
+            // If we date back to start, just select start
+            // Actually, we should keep the start selected.
+            // But usually dragging back to start means 1 item selected.
+            // Logic below handles it (startIdx === endIdx);
+        }
+
+        // Calculate range
+        const startIdx = allDateColumns.findIndex((c: { key: string }) => c.key === selectionStart);
+        const endIdx = allDateColumns.findIndex((c: { key: string }) => c.key === currentKey);
+
+        if (startIdx === -1 || endIdx === -1) return;
+
+        const minIdx = Math.min(startIdx, endIdx);
+        const maxIdx = Math.max(startIdx, endIdx);
+
+        const newSelection = new Set<string>();
+        for (let i = minIdx; i <= maxIdx; i++) {
+            newSelection.add(allDateColumns[i].key);
+        }
+        setSelectedDates(newSelection);
+    };
+
     const handleContextMenu = (e: React.MouseEvent, type: 'student' | 'date', id: string, termId?: string, date?: string) => {
         e.preventDefault();
+
+        // If right-clicking a date
+        if (type === 'date' && termId && date) {
+            const key = `${termId}|${date}`;
+
+            // If the right-clicked date is part of the selection, keep selection and show context menu
+            if (selectedDates.has(key)) {
+                setContextMenu({ x: e.pageX, y: e.pageY, type, id, termId, date });
+                return;
+            }
+
+            // If not part of selection, clear selection and select just this one
+            if (!selectedDates.has(key)) {
+                setSelectedDates(new Set([key]));
+            }
+        }
+
         setContextMenu({ x: e.pageX, y: e.pageY, type, id, termId, date });
     };
 
@@ -85,9 +179,10 @@ const AttendancePage: React.FC = () => {
                 const studentsRes = await api.get(`/v1/students/?group=${groupId}`);
                 const mappedStudents = studentsRes.data.map((s: any) => ({
                     id: String(s.id),
-                    firstName: s.name.split(' ')[0],
-                    lastName: s.name.split(' ').slice(1).join(' ') || '',
+                    name: s.name
                 }));
+                // Sort students alphabetically by name
+                mappedStudents.sort((a: any, b: any) => a.name.localeCompare(b.name));
                 setStudents(mappedStudents);
 
                 // Fetch Midterms
@@ -99,29 +194,29 @@ const AttendancePage: React.FC = () => {
 
                 // Process Attendance
                 const attMap: Record<string, Record<string, Record<string, number>>> = {};
-                const datesPerMidterm: Record<string, Set<string>> = {};
+                const timestampsPerMidterm: Record<string, Set<string>> = {};
 
                 rawAttendance.forEach((att: any) => {
                     const sId = String(att.student);
                     const mId = String(att.midterm);
-                    const date = att.date;
-                    const status = att.status; // 0 or 1
+                    const timestamp = att.date; // Full timestamp from backend
+                    const status = att.status; // 0, 1, or null
 
                     if (!attMap[sId]) attMap[sId] = {};
                     if (!attMap[sId][mId]) attMap[sId][mId] = {};
-                    attMap[sId][mId][date] = status;
+                    attMap[sId][mId][timestamp] = status;
 
-                    if (!datesPerMidterm[mId]) datesPerMidterm[mId] = new Set();
-                    datesPerMidterm[mId].add(date);
+                    if (!timestampsPerMidterm[mId]) timestampsPerMidterm[mId] = new Set();
+                    timestampsPerMidterm[mId].add(timestamp);
                 });
 
                 setAttendanceData(attMap);
 
-                // Map Midterms with sorted dates
+                // Map Midterms with sorted timestamps
                 const mappedTerms = midtermsRes.data.map((m: any) => ({
                     id: String(m.id),
                     name: m.name,
-                    dates: Array.from(datesPerMidterm[String(m.id)] || []).sort()
+                    dates: Array.from(timestampsPerMidterm[String(m.id)] || []).sort()
                 }));
                 setTerms(mappedTerms);
 
@@ -143,29 +238,103 @@ const AttendancePage: React.FC = () => {
         fetchInitialData();
     }, [subjectId, groupId]);
 
+    // Function to refresh attendance data without page reload
+    const refreshAttendanceData = async () => {
+        if (!subjectId || !groupId) return;
+        try {
+            const { default: api } = await import('../../api/client');
+
+            // Fetch Students
+            const studentsRes = await api.get(`/v1/students/?group=${groupId}`);
+            const mappedStudents = studentsRes.data.map((s: any) => ({
+                id: String(s.id),
+                name: s.name
+            }));
+            mappedStudents.sort((a: any, b: any) => a.name.localeCompare(b.name));
+            setStudents(mappedStudents);
+
+            // Fetch Midterms
+            const midtermsRes = await api.get(`/v1/midterms/?group=${groupId}`);
+
+            // Fetch All Attendance for this group
+            const attendanceRes = await api.get(`/v1/attendance/?group=${groupId}`);
+            const rawAttendance = attendanceRes.data;
+
+            // Process Attendance
+            const attMap: Record<string, Record<string, Record<string, number>>> = {};
+            const datesPerMidterm: Record<string, Set<string>> = {};
+
+            rawAttendance.forEach((att: any) => {
+                const sId = String(att.student);
+                const mId = String(att.midterm);
+                const date = att.date;
+                const status = att.status;
+
+                if (!attMap[sId]) attMap[sId] = {};
+                if (!attMap[sId][mId]) attMap[sId][mId] = {};
+                attMap[sId][mId][date] = status;
+
+                if (!datesPerMidterm[mId]) datesPerMidterm[mId] = new Set();
+                datesPerMidterm[mId].add(date);
+            });
+
+            setAttendanceData(attMap);
+
+            // Map Midterms with sorted dates
+            const mappedTerms = midtermsRes.data.map((m: any) => ({
+                id: String(m.id),
+                name: m.name,
+                dates: Array.from(datesPerMidterm[String(m.id)] || []).sort()
+            }));
+            setTerms(mappedTerms);
+        } catch (error) {
+            console.error("Error refreshing attendance data", error);
+        }
+    };
+
     const handleAddColumn = async (termId: string) => {
-        // Automatically use today's date
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        if (isAddingColumn) return;
+        setIsAddingColumn(true);
+        // Automatically use current date and time
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+
+        // Generate unique timestamp by adding current time
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const timestamp = `${dateStr}T${hours}:${minutes}:${seconds}`;
 
         try {
             const { default: api } = await import('../../api/client');
-            // Create default attendance (Present=1) for all students
+
+            // Create attendance records with status null (empty) for all students
+            // This persists the date in the database while keeping cells empty in the UI
             const promises = students.map(student =>
                 api.post('/v1/attendance/', {
                     student: student.id,
                     group: groupId,
                     midterm: termId,
-                    date: today,
-                    status: 1
+                    date: timestamp,
+                    status: null  // null means "not taken yet" / empty
+                }).catch(err => {
+                    // If record already exists (duplicate date), ignore the error
+                    if (err.response?.status === 400) {
+                        return; // Ignore duplicate errors
+                    }
+                    throw err;
                 })
             );
+
             await Promise.all(promises);
 
-            // Reload page to refresh data
-            window.location.reload();
+            // Refresh data without page reload
+            await refreshAttendanceData();
         } catch (error) {
             console.error("Error adding column", error);
-            alert("Failed to add attendance for today.");
+            alert("Failed to add attendance column.");
+        } finally {
+            setIsAddingColumn(false);
         }
     };
 
@@ -233,9 +402,10 @@ const AttendancePage: React.FC = () => {
             const studentsRes = await api.get(`/v1/students/?group=${groupId}`);
             const mappedStudents = studentsRes.data.map((s: any) => ({
                 id: String(s.id),
-                firstName: s.name.split(' ')[0],
-                lastName: s.name.split(' ').slice(1).join(' ') || '',
+                name: s.name
             }));
+            // Sort students alphabetically by name
+            mappedStudents.sort((a: any, b: any) => a.name.localeCompare(b.name));
             setStudents(mappedStudents);
 
             // Reset state
@@ -250,7 +420,7 @@ const AttendancePage: React.FC = () => {
         const student = students.find(s => s.id === studentId);
         if (student) {
             setEditingStudentId(studentId);
-            setEditingStudentName(`${student.lastName}, ${student.firstName}`);
+            setEditingStudentName(student.name);
         }
         setContextMenu(null);
     };
@@ -260,19 +430,24 @@ const AttendancePage: React.FC = () => {
 
         try {
             const { default: api } = await import('../../api/client');
-
             await api.put(`/v1/students/${studentId}/`, {
                 name: editingStudentName.trim()
             });
 
-            // Refresh students list
-            const studentsRes = await api.get(`/v1/students/?group=${groupId}`);
-            const mappedStudents = studentsRes.data.map((s: any) => ({
-                id: String(s.id),
-                firstName: s.name.split(' ')[0],
-                lastName: s.name.split(' ').slice(1).join(' ') || '',
-            }));
-            setStudents(mappedStudents);
+            // Update student in place and re-sort alphabetically
+            setStudents(prevStudents => {
+                const updatedStudents = prevStudents.map(student => {
+                    if (student.id === studentId) {
+                        return {
+                            ...student,
+                            name: editingStudentName.trim()
+                        };
+                    }
+                    return student;
+                });
+                // Re-sort alphabetically after update
+                return updatedStudents.sort((a, b) => a.name.localeCompare(b.name));
+            });
 
             setEditingStudentId(null);
             setEditingStudentName('');
@@ -288,14 +463,10 @@ const AttendancePage: React.FC = () => {
             const { default: api } = await import('../../api/client');
             await api.delete(`/v1/students/${studentId}/`);
 
-            // Refresh students list
-            const studentsRes = await api.get(`/v1/students/?group=${groupId}`);
-            const mappedStudents = studentsRes.data.map((s: any) => ({
-                id: String(s.id),
-                firstName: s.name.split(' ')[0],
-                lastName: s.name.split(' ').slice(1).join(' ') || '',
-            }));
-            setStudents(mappedStudents);
+            // Remove student from local state (already sorted)
+            setStudents(prevStudents =>
+                prevStudents.filter(s => s.id !== studentId)
+            );
         } catch (error) {
             console.error("Error deleting student", error);
         }
@@ -318,12 +489,95 @@ const AttendancePage: React.FC = () => {
                 )
             );
 
-            // Reload page to refresh
-            window.location.reload();
+            // Refresh data without page reload
+            await refreshAttendanceData();
         } catch (error) {
             console.error("Error deleting attendance date", error);
         }
         setContextMenu(null);
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedDates.size === 0) return;
+
+        if (!confirm(`Are you sure you want to delete ${selectedDates.size} columns?`)) return;
+
+        // Group by termId
+        const datesByTerm: Record<string, string[]> = {};
+        selectedDates.forEach(key => {
+            const [tId, val] = key.split('|');
+            if (!datesByTerm[tId]) datesByTerm[tId] = [];
+            datesByTerm[tId].push(val);
+        });
+
+        try {
+            const { default: api } = await import('../../api/client');
+
+            const deletePromises = Object.entries(datesByTerm).map(async ([tId, dates]) => {
+                // Fetch all records for this term
+                const attendanceRes = await api.get(`/v1/attendance/?group=${groupId}&midterm=${tId}`);
+                const recordsToDelete = attendanceRes.data.filter((r: any) => dates.includes(r.date));
+
+                return Promise.all(recordsToDelete.map((record: any) => api.delete(`/v1/attendance/${record.id}/`)));
+            });
+
+            await Promise.all(deletePromises);
+
+            await refreshAttendanceData();
+            setSelectedDates(new Set()); // Clear selection
+        } catch (error) {
+            console.error("Bulk delete failed", error);
+            alert("Failed to delete selected columns.");
+        }
+        setContextMenu(null);
+    };
+
+    // Helper for single delete to use shared logic if needed, but keeping separate is fine for now.
+    // Actually, let's update handleDeleteDate to just use the direct logic as before to avoid breaking changes, 
+    // or modify it to use the new API calls. The existing logic works fine.
+
+
+    const handleEditDate = (termId: string, oldDate: string) => {
+        setEditingDate({ termId, oldDate });
+        setNewDate(oldDate);
+        setContextMenu(null);
+    };
+
+    const handleSaveEditedDate = async () => {
+        if (!editingDate || !newDate) return;
+
+        const { termId, oldDate } = editingDate;
+
+        try {
+            const { default: api } = await import('../../api/client');
+
+            // Get all attendance records for the old date
+            const attendanceRes = await api.get(`/v1/attendance/?group=${groupId}&midterm=${termId}`);
+            const recordsToUpdate = attendanceRes.data.filter((r: any) => r.date === oldDate);
+
+            // Update each record with the new date
+            await Promise.all(
+                recordsToUpdate.map((record: any) =>
+                    api.put(`/v1/attendance/${record.id}/`, {
+                        ...record,
+                        date: newDate
+                    })
+                )
+            );
+
+            // Refresh data
+            await refreshAttendanceData();
+            setEditingDate(null);
+            setNewDate('');
+        } catch (error) {
+            console.error("Error updating attendance date", error);
+            alert("Failed to update date.");
+        }
+    };
+
+    const handleCancelEditDate = () => {
+        setEditingDate(null);
+        setNewDate('');
     };
 
     const handleGradesClick = () => {
@@ -366,22 +620,35 @@ const AttendancePage: React.FC = () => {
                             <tr>
                                 {terms.map(term => (
                                     <React.Fragment key={`${term.id}-dates`}>
-                                        {term.dates.map((date: string, idx: number) => (
-                                            <th
-                                                key={idx}
-                                                className="unified-header-vertical"
-                                                onContextMenu={(e) => handleContextMenu(e, 'date', `${term.id}-${idx}`, term.id, date)}
-                                            >
-                                                {/* Display full date with year */}
-                                                <div className="vertical-text-wrapper">{date}</div>
-                                            </th>
-                                        ))}
+                                        {term.dates.map((timestamp: string, idx: number) => {
+                                            // Extract date portion for display (YYYY-MM-DD)
+                                            const dateOnly = timestamp.split('T')[0];
+                                            const isSelected = selectedDates.has(`${term.id}|${timestamp}`);
+
+                                            return (
+                                                <th
+                                                    key={idx}
+                                                    className={`unified-header-vertical ${isSelected ? 'selected' : ''}`}
+                                                    onContextMenu={(e) => handleContextMenu(e, 'date', `${term.id}-${idx}`, term.id, timestamp)}
+                                                    onMouseDown={() => handleHeaderMouseDown(term.id, timestamp)}
+                                                    onMouseEnter={() => handleHeaderMouseEnter(term.id, timestamp)}
+                                                    style={{
+                                                        cursor: 'pointer',
+                                                        userSelect: 'none'
+                                                    }}
+                                                >
+                                                    {/* Display only date, not time */}
+                                                    <div className="vertical-text-wrapper">{dateOnly}</div>
+                                                </th>
+                                            )
+                                        })}
                                         <th
-                                            className="add-btn-cell"
-                                            onClick={() => handleAddColumn(term.id)}
+                                            className={`add-btn-cell ${isAddingColumn ? 'disabled' : ''}`}
+                                            onClick={() => !isAddingColumn && handleAddColumn(term.id)}
                                             title="Add Date"
+                                            style={{ cursor: isAddingColumn ? 'wait' : 'pointer', opacity: isAddingColumn ? 0.7 : 1 }}
                                         >
-                                            +
+                                            {isAddingColumn ? '...' : '+'}
                                         </th>
                                     </React.Fragment>
                                 ))}
@@ -419,13 +686,15 @@ const AttendancePage: React.FC = () => {
                                                 style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', textAlign: 'left', padding: '0 24px' }}
                                             />
                                         ) : (
-                                            `${student.lastName}, ${student.firstName}`
+                                            student.name
                                         )}
                                     </td>
                                     {terms.map((term) => (
                                         <React.Fragment key={term.id}>
                                             {term.dates.map((date: string, idx: number) => {
                                                 const status = getStatus(student.id, term.id, date);
+                                                // Treat null (empty/not taken) as empty string, otherwise show the status
+                                                // Status values: 0 = absent, 1 = present, null = not taken yet
                                                 const val = status !== null ? String(status) : "";
                                                 const cellKey = `${student.id}-${term.id}-${date}`;
                                                 return (
@@ -535,6 +804,31 @@ const AttendancePage: React.FC = () => {
                 <button className="footer-btn-unified" onClick={handleGradesClick}>Calificaciones</button>
             </footer>
 
+            {/* Edit Date Modal */}
+            {editingDate && (
+                <div className="modal-overlay" onClick={handleCancelEditDate}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h3>Editar Fecha de Asistencia</h3>
+                        <p>Selecciona una nueva fecha (solo fechas futuras):</p>
+                        <input
+                            type="date"
+                            value={newDate}
+                            min={new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setNewDate(e.target.value)}
+                            className="date-picker-input"
+                        />
+                        <div className="modal-actions">
+                            <button onClick={handleSaveEditedDate} className="btn-primary">
+                                Guardar
+                            </button>
+                            <button onClick={handleCancelEditDate} className="btn-secondary">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {
                 contextMenu && (
                     <div
@@ -553,9 +847,22 @@ const AttendancePage: React.FC = () => {
                             </>
                         )}
                         {contextMenu.type === 'date' && contextMenu.termId && contextMenu.date && (
-                            <div className="context-menu-item-unified danger" onClick={() => handleDeleteDate(contextMenu.termId!, contextMenu.date!)}>
-                                Eliminar
-                            </div>
+                            <>
+                                {selectedDates.size > 1 ? (
+                                    <div className="context-menu-item-unified danger" onClick={handleBulkDelete}>
+                                        Eliminar {selectedDates.size} Columnas
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="context-menu-item-unified" onClick={() => handleEditDate(contextMenu.termId!, contextMenu.date!)}>
+                                            Editar Fecha
+                                        </div>
+                                        <div className="context-menu-item-unified danger" onClick={() => handleDeleteDate(contextMenu.termId!, contextMenu.date!)}>
+                                            Eliminar
+                                        </div>
+                                    </>
+                                )}
+                            </>
                         )}
                     </div>
                 )

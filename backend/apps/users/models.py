@@ -31,10 +31,23 @@ class Plans(models.Model):
 class Teachers(AbstractBaseUser, PermissionsMixin):
     email = models.CharField(unique=True, max_length=255)
     password = models.CharField(max_length=255, db_column='password_hash')
+    
+    # Profile fields
+    name = models.CharField(max_length=255, blank=True, null=True)
+    last_name = models.CharField(max_length=255, blank=True, null=True)
+    profile_picture_url = models.TextField(blank=True, null=True)
+    
+    # Email verification
+    email_verified = models.BooleanField(default=False)
+    verification_token = models.CharField(max_length=255, blank=True, null=True)
+    verification_token_expires = models.DateTimeField(blank=True, null=True)
+    
+    # Other fields
     stripe_customer_id = models.CharField(max_length=255, blank=True, null=True)
     referral_code = models.CharField(unique=True, max_length=50, blank=True, null=True)
     referred_by_code = models.CharField(max_length=50, blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
+    last_login = models.DateTimeField(blank=True, null=True)
     
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)

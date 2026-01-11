@@ -1,3 +1,18 @@
+-- Database: teacher_calc
+
+-- DROP DATABASE IF EXISTS teacher_calc;
+
+CREATE DATABASE teacher_calc
+    WITH
+    OWNER = postgres
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'en_US.utf8'
+    LC_CTYPE = 'en_US.utf8'
+    LOCALE_PROVIDER = 'libc'
+    TABLESPACE = pg_default
+    CONNECTION LIMIT = -1
+    IS_TEMPLATE = False;
+
 -- =============================================
 -- MÓDULO 1: USUARIOS PRINCIPALES, PERFILES Y AUTH
 -- =============================================
@@ -276,3 +291,31 @@ CREATE POLICY attendance_isolation ON attendance
         JOIN schools sch ON s.school_id = sch.id
         WHERE sch.teacher_id = current_setting('app.current_teacher_id')::INTEGER
     ));
+
+-- =============================================
+-- MÓDULO 6: Queries
+-- =============================================
+
+INSERT INTO teachers (email, password_hash) 
+VALUES ('ivanvivasgar@gmail.com', 'password123');
+
+SELECT * FROM teachers;
+
+-- =============================================
+-- MÓDULO 6: ALTER TABLES
+-- =============================================
+
+ALTER TABLE teachers ADD COLUMN last_login TIMESTAMP WITH TIME ZONE;
+
+-- Add name and last_name to teachers table
+ALTER TABLE teachers ADD COLUMN name VARCHAR(255);
+ALTER TABLE teachers ADD COLUMN last_name VARCHAR(255);
+-- Add optional profile picture
+ALTER TABLE teachers ADD COLUMN profile_picture_url TEXT;
+-- Add email verification fields
+ALTER TABLE teachers ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
+ALTER TABLE teachers ADD COLUMN verification_token VARCHAR(255);
+ALTER TABLE teachers ADD COLUMN verification_token_expires TIMESTAMP WITH TIME ZONE;
+-- Add last_login (already done)
+-- ALTER TABLE teachers ADD COLUMN last_login TIMESTAMP WITH TIME ZONE;
+

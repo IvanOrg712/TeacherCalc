@@ -78,13 +78,46 @@ const Dashboard: React.FC = () => {
             };
 
             if (selectedSchool) {
-                await api.put(`/v1/schools/${selectedSchool.id}/`, payload);
+                // Update existing school
+                const response = await api.put(`/v1/schools/${selectedSchool.id}/`, payload);
+
+                // Update school in place to maintain order
+                setSchools(prevSchools =>
+                    prevSchools.map(school =>
+                        school.id === selectedSchool.id
+                            ? {
+                                ...school,
+                                name: data.name,
+                                passingGrade: data.passingGrade,
+                                midtermCount: data.midtermCount,
+                                gradingConfig: {
+                                    passingGrade: data.passingGrade,
+                                    maxGrade: 10,
+                                    gradeScale: 'numeric' as const
+                                }
+                            }
+                            : school
+                    )
+                );
             } else {
-                await api.post('/v1/schools/', payload);
+                // Create new school
+                const response = await api.post('/v1/schools/', payload);
+                const newSchool = {
+                    id: response.data.id,
+                    name: data.name,
+                    passingGrade: data.passingGrade,
+                    midtermCount: data.midtermCount,
+                    subjects: [],
+                    gradingConfig: {
+                        passingGrade: data.passingGrade,
+                        maxGrade: 10,
+                        gradeScale: 'numeric' as const
+                    }
+                };
+                setSchools(prevSchools => [...prevSchools, newSchool]);
             }
 
             setIsSchoolOverlayOpen(false);
-            fetchSchools(); // Refresh list
         } catch (error) {
             console.error("Error saving school:", error);
             showError("Failed to save school.");
@@ -132,15 +165,51 @@ const Dashboard: React.FC = () => {
 
             if (selectedSubject) {
                 // Update existing subject
-                await api.put(`/v1/subjects/${selectedSubject.id}/`, payload);
+                const response = await api.put(`/v1/subjects/${selectedSubject.id}/`, payload);
+
+                // Update subject in place to maintain order
+                setSchools(prevSchools =>
+                    prevSchools.map(school =>
+                        school.id === selectedSchoolIdForSubject
+                            ? {
+                                ...school,
+                                subjects: school.subjects.map(subject =>
+                                    subject.id === selectedSubject.id
+                                        ? {
+                                            ...subject,
+                                            name: data.name,
+                                            groups: response.data.groups || groups
+                                        }
+                                        : subject
+                                )
+                            }
+                            : school
+                    )
+                );
             } else {
                 // Create new subject
-                await api.post('/v1/subjects/', payload);
+                const response = await api.post('/v1/subjects/', payload);
+                const newSubject = {
+                    id: response.data.id,
+                    name: data.name,
+                    groups: response.data.groups || groups
+                };
+
+                // Add new subject to the school
+                setSchools(prevSchools =>
+                    prevSchools.map(school =>
+                        school.id === selectedSchoolIdForSubject
+                            ? {
+                                ...school,
+                                subjects: [...school.subjects, newSubject]
+                            }
+                            : school
+                    )
+                );
             }
 
             setIsSubjectOverlayOpen(false);
             setSelectedSubject(null);
-            fetchSchools(); // Refresh list
         } catch (error) {
             console.error("Error saving subject:", error);
             showError("Failed to save subject.");

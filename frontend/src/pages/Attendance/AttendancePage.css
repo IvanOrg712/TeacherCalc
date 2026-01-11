@@ -31,7 +31,10 @@
 
 .attendance-content {
     flex: 1;
-    overflow: auto;
+    overflow-y: auto;
+    /* Allow vertical scroll */
+    overflow-x: hidden;
+    /* Prevent horizontal scroll on background */
     padding: 2rem;
     display: flex;
     justify-content: center;

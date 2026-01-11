@@ -22,8 +22,11 @@
     background: white;
     border-radius: 4px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
+    overflow: auto;
+    /* Allow scrolling both horizontally and vertically */
     max-width: 100%;
+    position: relative;
+    /* For sticky positioning */
 }
 
 .unified-table {
@@ -89,6 +92,13 @@
     color: var(--text-primary);
     white-space: nowrap;
     height: 40px;
+
+    /* Sticky positioning for horizontal scroll */
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    border-right: 2px solid #ddd;
+    /* Visual separation */
 }
 
 /* --- Input Cells --- */
@@ -244,4 +254,10 @@
     min-width: 80px !important;
     max-width: 80px !important;
     width: 80px !important;
+}
+/* Selected Header Style */
+.unified-header-vertical.selected {
+    background-color: #e3f2fd !important;
+    border-bottom: 3px solid #2196f3 !important;
+    color: #1565c0;
 }

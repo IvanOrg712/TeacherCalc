@@ -5,8 +5,10 @@ export interface AttendanceRecord {
 
 export interface Student {
     id: string;
-    firstName: string;
-    lastName: string; // "Ivan Vivas Garcia"
+    name: string; // Full name as entered by user
+    // Deprecated fields - keeping for backwards compatibility
+    firstName?: string;
+    lastName?: string;
     // In a real app we might store attendance in a separate collection.
     // attendance: Record<string, boolean>; // Deprecated
     attendance?: Record<string, boolean>;

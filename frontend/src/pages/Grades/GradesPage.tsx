@@ -75,10 +75,11 @@ const GradesPage: React.FC = () => {
                 // Map API students to frontend interface
                 const mappedStudents = studentsRes.data.map((s: any) => ({
                     id: String(s.id),
-                    firstName: s.name.split(' ')[0],
-                    lastName: s.name.split(' ').slice(1).join(' ') || '',
+                    name: s.name,
                     attendance: {}
                 }));
+                // Sort students alphabetically by name
+                mappedStudents.sort((a: any, b: any) => a.name.localeCompare(b.name));
                 setStudents(mappedStudents);
 
                 // Fetch Midterms
@@ -600,7 +601,7 @@ const GradesPage: React.FC = () => {
                                     let cIdx = 0;
                                     return (
                                         <tr key={student.id}>
-                                            <td className="student-col-unified">{student.lastName}, {student.firstName}</td>
+                                            <td className="student-col-unified">{student.name}</td>
                                             {evaluations.map(ev => (
                                                 <React.Fragment key={ev.id}>
                                                     {activities[ev.id]?.map(act => {
@@ -630,9 +631,9 @@ const GradesPage: React.FC = () => {
                                                                                     ...prev,
                                                                                     [student.id]: {
                                                                                         ...prev[student.id],
-                                                                                        [act.id]: { 
-                                                                                            id: prev[student.id]?.[act.id]?.id || 0, 
-                                                                                            score: numValue || 0 
+                                                                                        [act.id]: {
+                                                                                            id: prev[student.id]?.[act.id]?.id || 0,
+                                                                                            score: numValue || 0
                                                                                         }
                                                                                     }
                                                                                 }));

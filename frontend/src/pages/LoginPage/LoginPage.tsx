@@ -104,6 +104,16 @@ const LoginPage: React.FC = () => {
                         <button type="submit" className="login-btn">
                             Iniciar Sesión
                         </button>
+
+                        <div className="signup-link" style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#718096' }}>
+                            ¿No tienes una cuenta?{' '}
+                            <a href="/signup" onClick={(e) => {
+                                e.preventDefault();
+                                navigate('/signup');
+                            }} style={{ color: '#667eea', textDecoration: 'none', fontWeight: '600' }}>
+                                Regístrate
+                            </a>
+                        </div>
                     </form>
                 </div>
             </div>

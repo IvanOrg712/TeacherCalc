@@ -87,8 +87,8 @@ class Attendance(models.Model):
     student = models.ForeignKey(Students, models.DO_NOTHING)
     group = models.ForeignKey(Groups, models.DO_NOTHING)
     midterm = models.ForeignKey(Midterms, models.DO_NOTHING)
-    date = models.DateField()
-    status = models.SmallIntegerField()
+    date = models.DateTimeField()  # Changed to DateTimeField to allow multiple records per day
+    status = models.SmallIntegerField(null=True, blank=True)  # Allow NULL for empty cells
 
     class Meta:
         managed = False
