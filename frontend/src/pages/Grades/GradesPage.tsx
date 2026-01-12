@@ -45,6 +45,34 @@ const GradesPage: React.FC = () => {
 
     // Track which cell is currently being edited (null = none)
     const [editingCell, setEditingCell] = useState<string | null>(null);
+    const [editingValue, setEditingValue] = useState<string>('');
+
+    // Tooltip State
+    const [tooltipData, setTooltipData] = useState<{
+        type: 'evaluation' | 'activity';
+        data: any;
+        x: number;
+        y: number
+    } | null>(null);
+    const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const navigationRef = useRef(false);
+
+    const handleTooltipEnter = (e: React.MouseEvent, type: 'evaluation' | 'activity', data: any) => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        // Position centered below
+        const x = rect.left + rect.width / 2;
+        const y = rect.bottom;
+
+        hoverTimeoutRef.current = setTimeout(() => {
+            setTooltipData({ type, data, x, y });
+        }, 1000);
+    };
+
+    const handleTooltipLeave = () => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        setTooltipData(null);
+    };
 
     // Evaluation Editing & Context Menu State
     const [editingEvalId, setEditingEvalId] = useState<string | null>(null);
@@ -389,13 +417,37 @@ const GradesPage: React.FC = () => {
 
     // Handle grade change (save to API)
     const handleGradeChange = async (studentId: string, activityId: string, value: string, maxScore: number) => {
+        // Handle Deletion (empty string)
+        if (value === '') {
+            const existingGrade = gradesMap[studentId]?.[activityId];
+            if (existingGrade && existingGrade.id) {
+                try {
+                    const { default: api } = await import('../../api/client');
+                    await api.delete(`/v1/grades/${existingGrade.id}/`);
+                    // Update map locally
+                    setGradesMap(prev => {
+                        const newMap = { ...prev };
+                        if (newMap[studentId]) {
+                            const newStudentGrades = { ...newMap[studentId] };
+                            delete newStudentGrades[activityId];
+                            newMap[studentId] = newStudentGrades;
+                        }
+                        return newMap;
+                    });
+                } catch (e) {
+                    console.error("Delete grade failed", e);
+                }
+            }
+            return;
+        }
+
         const numValue = parseFloat(value);
         if (!isNaN(numValue) && numValue >= 0 && numValue <= maxScore) {
             const existingGrade = gradesMap[studentId]?.[activityId];
 
             try {
                 const { default: api } = await import('../../api/client');
-                if (existingGrade) {
+                if (existingGrade && existingGrade.id) {
                     await api.put(`/v1/grades/${existingGrade.id}/`, {
                         student: studentId,
                         activity: activityId,
@@ -426,7 +478,7 @@ const GradesPage: React.FC = () => {
     const finalGrades = useMemo(() => {
         return students.map((student) => {
             let totalWeightedScore = 0;
-            let totalWeight = 0;
+
 
             evaluations.forEach(ev => {
                 const evActivities = activities[ev.id] || [];
@@ -446,7 +498,7 @@ const GradesPage: React.FC = () => {
                     autoWeight = Math.max(0, (100 - currentWeightUsed) / autoActs.length);
                 }
 
-                let evalGrade = 0; // Final grade for this evaluation (0-10 scale)
+
 
                 // We need to sum (score * weight) for all activities
                 // Normalizing score to 0-1 (percentage of maxScore) then multiply by weightPercentage (0-100)
@@ -507,12 +559,10 @@ const GradesPage: React.FC = () => {
 
                 // Add to Total Midterm
                 totalWeightedScore += finalEvalGrade * (ev.weightPercentage / 100);
-                totalWeight += ev.weightPercentage / 100;
             });
 
-            if (totalWeight === 0) return undefined;
-            // Round to 2 decimals
-            return Math.round((totalWeightedScore / totalWeight) * 100) / 100;
+            // Return accumulated points (0-10 scale)
+            return Math.round(totalWeightedScore * 100) / 100;
         });
     }, [students, evaluations, activities, gradesMap, gradingConfig]);
 
@@ -570,6 +620,8 @@ const GradesPage: React.FC = () => {
                                             colSpan={(activities[ev.id]?.length || 0) + 1}
                                             className="unified-header-main"
                                             onContextMenu={(e) => handleEvaluationContextMenu(e, ev.id)}
+                                            onMouseEnter={(e) => handleTooltipEnter(e, 'evaluation', ev)}
+                                            onMouseLeave={handleTooltipLeave}
                                             style={{ cursor: 'context-menu' }}
                                             title="Right-click to edit/delete"
                                         >
@@ -587,7 +639,10 @@ const GradesPage: React.FC = () => {
                                     {evaluations.map((ev, evIdx) => (
                                         <React.Fragment key={ev.id}>
                                             {activities[ev.id]?.map((act, actIdx) => (
-                                                <th key={act.id} className="unified-header-vertical">
+                                                <th key={act.id} className="unified-header-vertical"
+                                                    onMouseEnter={(e) => handleTooltipEnter(e, 'activity', { ...act, parentEvalId: ev.id })}
+                                                    onMouseLeave={handleTooltipLeave}
+                                                >
                                                     <div className="vertical-text-wrapper">{act.name}</div>
                                                 </th>
                                             ))}
@@ -615,16 +670,30 @@ const GradesPage: React.FC = () => {
                                                                 className={`unified-cell-hover ${isSelectedCell ? 'cell-selected' : ''}`}
                                                                 onMouseDown={(e) => handleCellSelect(sIdx, currentCIdx, e)}
                                                                 onMouseEnter={() => handleCellMouseEnter(sIdx, currentCIdx)}
-                                                                onClick={() => setEditingCell(`${student.id}-${act.id}`)}
+                                                                onClick={() => {
+                                                                    setEditingCell(`${student.id}-${act.id}`);
+                                                                    setEditingValue(String(score ?? ''));
+                                                                }}
                                                             >
                                                                 <div className="cell-input-wrapper">
                                                                     <input
                                                                         type="number"
                                                                         className="unified-input"
-                                                                        value={score ?? ''}
+                                                                        ref={(input) => {
+                                                                            if (input && editingCell === `${student.id}-${act.id}` && document.activeElement !== input) {
+                                                                                input.focus();
+                                                                            }
+                                                                        }}
+                                                                        value={editingCell === `${student.id}-${act.id}` ? editingValue : (score ?? '')}
                                                                         readOnly={editingCell !== `${student.id}-${act.id}`}
+                                                                        onFocus={() => {
+                                                                            navigationRef.current = false;
+                                                                        }}
                                                                         onChange={(e) => {
                                                                             const newValue = e.target.value;
+                                                                            setEditingValue(newValue);
+
+                                                                            // Live update (treat empty as 0)
                                                                             const numValue = parseFloat(newValue);
                                                                             if (newValue === '' || (!isNaN(numValue) && numValue >= 0 && numValue <= act.maxScore)) {
                                                                                 setGradesMap(prev => ({
@@ -633,20 +702,42 @@ const GradesPage: React.FC = () => {
                                                                                         ...prev[student.id],
                                                                                         [act.id]: {
                                                                                             id: prev[student.id]?.[act.id]?.id || 0,
-                                                                                            score: numValue || 0
+                                                                                            score: isNaN(numValue) ? 0 : numValue
                                                                                         }
                                                                                     }
                                                                                 }));
                                                                             }
                                                                         }}
                                                                         onBlur={(e) => {
+                                                                            if (navigationRef.current) return;
                                                                             handleGradeChange(student.id, act.id, e.target.value, act.maxScore);
                                                                             setEditingCell(null);
                                                                         }}
                                                                         onKeyDown={(e) => {
                                                                             if (e.key === 'Enter') {
-                                                                                handleGradeChange(student.id, act.id, (e.target as HTMLInputElement).value, act.maxScore);
-                                                                                setEditingCell(null);
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                const val = (e.target as HTMLInputElement).value;
+                                                                                handleGradeChange(student.id, act.id, val, act.maxScore);
+
+                                                                                // Vertical Navigation: Find next empty cell
+                                                                                let found = false;
+                                                                                navigationRef.current = true;
+                                                                                for (let i = sIdx + 1; i < students.length; i++) {
+                                                                                    const nextS = students[i];
+                                                                                    // Check if empty (no grade in map)
+                                                                                    if (!gradesMap[nextS.id]?.[act.id]) {
+                                                                                        setEditingCell(`${nextS.id}-${act.id}`);
+                                                                                        setEditingValue('');
+                                                                                        found = true;
+                                                                                        break;
+                                                                                    }
+                                                                                }
+                                                                                if (!found) {
+                                                                                    (e.target as HTMLInputElement).blur();
+                                                                                    setEditingCell(null);
+                                                                                    if (clearSelection) clearSelection();
+                                                                                }
                                                                             }
                                                                         }}
                                                                     />
@@ -657,6 +748,8 @@ const GradesPage: React.FC = () => {
                                                     <td className="add-btn-cell" style={{ backgroundColor: '#e0e0e0' }}>{(() => { cIdx++; return null; })()}</td>
                                                 </React.Fragment>
                                             ))}
+                                            {/* Empty cell to align with + Evaluation header */}
+                                            <td style={{ backgroundColor: '#f9f9f9', borderRight: '1px solid #ccc' }}></td>
                                             <td className="total-cell-unified">
                                                 {finalGrades[sIdx]?.toFixed(2) || '-'}
                                             </td>
@@ -729,6 +822,57 @@ const GradesPage: React.FC = () => {
                 onClose={() => setIsErrorOpen(false)}
                 message={errorMessage}
             />
+
+            {tooltipData && (
+                <div style={{
+                    position: 'fixed',
+                    top: tooltipData.y + 8,
+                    left: tooltipData.x,
+                    transform: 'translateX(-50%)',
+                    zIndex: 1000,
+                    backgroundColor: 'white',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    border: '1px solid #e0e0e0',
+                    minWidth: '200px',
+                    fontSize: '14px',
+                    pointerEvents: 'none',
+                    color: '#333'
+                }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '6px', borderBottom: '1px solid #eee', paddingBottom: '6px', fontSize: '15px' }}>
+                        {tooltipData.data.name}
+                    </div>
+                    {tooltipData.type === 'evaluation' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#666' }}>
+                            <div><strong>Weight:</strong> {tooltipData.data.weightPercentage}% {tooltipData.data.isFixed ? '(Fixed)' : '(Auto)'}</div>
+                        </div>
+                    )}
+                    {tooltipData.type === 'activity' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#666' }}>
+                            <div><strong>Max Score:</strong> {tooltipData.data.maxScore}</div>
+                            <div>
+                                <strong>Weight:</strong> {(() => {
+                                    if (tooltipData.data.isFixed) return tooltipData.data.weightPercentage;
+                                    // Calculate effective weight
+                                    if (!tooltipData.data.parentEvalId) return '0';
+                                    const siblings = activities[tooltipData.data.parentEvalId] || [];
+                                    const fixed = siblings.filter(a => a.isFixed);
+                                    const auto = siblings.filter(a => !a.isFixed);
+                                    const used = fixed.reduce((sum, a) => sum + (a.weightPercentage || 0), 0);
+                                    const remaining = Math.max(0, 100 - used);
+                                    if (auto.length === 0) return 0;
+                                    return (remaining / auto.length).toFixed(2);
+                                })()}% {tooltipData.data.isFixed ? '(Fixed)' : '(Auto)'}
+                            </div>
+                            {tooltipData.data.isExtraPoints && <div style={{ color: '#2e7d32', fontWeight: 600 }}>Extra Points</div>}
+                            {tooltipData.data.description && <div style={{ marginTop: '6px', fontStyle: 'italic', background: '#f9f9f9', padding: '4px', borderRadius: '4px' }}>"{tooltipData.data.description}"</div>}
+                        </div>
+                    )}
+                </div>
+            )}
+
+
         </div>
     );
 };
