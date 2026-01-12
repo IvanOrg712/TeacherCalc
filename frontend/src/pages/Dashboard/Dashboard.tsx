@@ -6,10 +6,12 @@ import SchoolConfigOverlay from '../../components/overlays/SchoolConfigOverlay/S
 import SubjectConfigOverlay from '../../components/overlays/SubjectConfigOverlay/SubjectConfigOverlay';
 import ErrorOverlay from '../../components/overlays/ErrorOverlay/ErrorOverlay';
 import ContextMenu from '../../components/common/ContextMenu/ContextMenu';
+import { useSubjectGroup } from '../../contexts/SubjectGroupContext';
 import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
+    const { prefetchAllGroupData } = useSubjectGroup();
 
     const [schools, setSchools] = useState<any[]>([]); // Start empty, fetch from API
     const [isSchoolOverlayOpen, setIsSchoolOverlayOpen] = useState(false);
@@ -230,6 +232,10 @@ const Dashboard: React.FC = () => {
     };
 
     const handleGroupClick = (subjectId: string, groupId: string) => {
+        // Start prefetching all group data immediately
+        prefetchAllGroupData(subjectId, groupId);
+
+        // Navigate to attendance page
         navigate(`/attendance/${subjectId}/${groupId}`);
     };
 

@@ -7,16 +7,35 @@ import './AttendancePage.css';
 const AttendancePage: React.FC = () => {
     const { subjectId, groupId } = useParams<{ subjectId: string; groupId: string }>();
     const navigate = useNavigate();
-    const { data: subjectGroupData, fetchData } = useSubjectGroup();
+    const {
+        data: groupData,
+        prefetchAllGroupData,
+        updateAttendance,
+        refetchStudents,
+        refetchAttendance
+    } = useSubjectGroup();
 
-    // State
-    const [students, setStudents] = useState<Student[]>([]);
+    // Note: students, terms, and attendanceData now come from groupData context
+    // We no longer need local state for these
 
-    // Terms structure: { id: string, name: string, dates: string[] }
-    const [terms, setTerms] = useState<any[]>([]);
+    // Derived values from context
+    const students = groupData?.students || [];
+    const terms = groupData?.midterms.map(m => ({
+        id: m.id,
+        name: m.name,
+        dates: groupData.attendanceDatesByMidterm[m.id] || []
+    })) || [];
+    const attendanceData = groupData?.attendanceData || {};
 
-    // Attendance data: studentId -> midtermId -> date -> status (1 or 0)
-    const [attendanceData, setAttendanceData] = useState<Record<string, Record<string, Record<string, number>>>>({});
+    // Trigger prefetch if data not loaded
+    useEffect(() => {
+        if (!subjectId || !groupId) return;
+
+        // If data not loaded or different group, trigger prefetch
+        if (!groupData?.isFullyLoaded || groupData.groupId !== groupId) {
+            prefetchAllGroupData(subjectId, groupId);
+        }
+    }, [subjectId, groupId, groupData, prefetchAllGroupData]);
 
     // Context Menu State
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; type: 'student' | 'date'; id: string; termId?: string; date?: string } | null>(null);
@@ -169,121 +188,14 @@ const AttendancePage: React.FC = () => {
         }
     }, [students]);
 
-    useEffect(() => {
-        const fetchInitialData = async () => {
-            if (!subjectId || !groupId) return;
+    // Old fetchInitialData useEffect removed - data now comes from context via prefetchAllGroupData
 
-            // Fetch subject/group data from context (will use cache if available)
-            await fetchData(subjectId, groupId);
-
-            try {
-                const { default: api } = await import('../../api/client');
-
-                // Fetch Students
-                const studentsRes = await api.get(`/v1/students/?group=${groupId}`);
-                const mappedStudents = studentsRes.data.map((s: any) => ({
-                    id: String(s.id),
-                    name: s.name
-                }));
-                // Sort students alphabetically by name
-                mappedStudents.sort((a: any, b: any) => a.name.localeCompare(b.name));
-                setStudents(mappedStudents);
-
-                // Fetch Midterms
-                const midtermsRes = await api.get(`/v1/midterms/?group=${groupId}`);
-
-                // Fetch All Attendance for this group
-                const attendanceRes = await api.get(`/v1/attendance/?group=${groupId}`);
-                const rawAttendance = attendanceRes.data;
-
-                // Process Attendance
-                const attMap: Record<string, Record<string, Record<string, number>>> = {};
-                const timestampsPerMidterm: Record<string, Set<string>> = {};
-
-                rawAttendance.forEach((att: any) => {
-                    const sId = String(att.student);
-                    const mId = String(att.midterm);
-                    const timestamp = att.date; // Full timestamp from backend
-                    const status = att.status; // 0, 1, or null
-
-                    if (!attMap[sId]) attMap[sId] = {};
-                    if (!attMap[sId][mId]) attMap[sId][mId] = {};
-                    attMap[sId][mId][timestamp] = status;
-
-                    if (!timestampsPerMidterm[mId]) timestampsPerMidterm[mId] = new Set();
-                    timestampsPerMidterm[mId].add(timestamp);
-                });
-
-                setAttendanceData(attMap);
-
-                // Map Midterms with sorted timestamps
-                const mappedTerms = midtermsRes.data.map((m: any) => ({
-                    id: String(m.id),
-                    name: m.name,
-                    dates: Array.from(timestampsPerMidterm[String(m.id)] || []).sort()
-                }));
-                setTerms(mappedTerms);
-
-            } catch (error) {
-                console.error("Error fetching data", error);
-            }
-        };
-
-        fetchInitialData();
-    }, [subjectId, groupId, fetchData]);
 
     // Function to refresh attendance data without page reload
     const refreshAttendanceData = async () => {
         if (!subjectId || !groupId) return;
-        try {
-            const { default: api } = await import('../../api/client');
-
-            // Fetch Students
-            const studentsRes = await api.get(`/v1/students/?group=${groupId}`);
-            const mappedStudents = studentsRes.data.map((s: any) => ({
-                id: String(s.id),
-                name: s.name
-            }));
-            mappedStudents.sort((a: any, b: any) => a.name.localeCompare(b.name));
-            setStudents(mappedStudents);
-
-            // Fetch Midterms
-            const midtermsRes = await api.get(`/v1/midterms/?group=${groupId}`);
-
-            // Fetch All Attendance for this group
-            const attendanceRes = await api.get(`/v1/attendance/?group=${groupId}`);
-            const rawAttendance = attendanceRes.data;
-
-            // Process Attendance
-            const attMap: Record<string, Record<string, Record<string, number>>> = {};
-            const datesPerMidterm: Record<string, Set<string>> = {};
-
-            rawAttendance.forEach((att: any) => {
-                const sId = String(att.student);
-                const mId = String(att.midterm);
-                const date = att.date;
-                const status = att.status;
-
-                if (!attMap[sId]) attMap[sId] = {};
-                if (!attMap[sId][mId]) attMap[sId][mId] = {};
-                attMap[sId][mId][date] = status;
-
-                if (!datesPerMidterm[mId]) datesPerMidterm[mId] = new Set();
-                datesPerMidterm[mId].add(date);
-            });
-
-            setAttendanceData(attMap);
-
-            // Map Midterms with sorted dates
-            const mappedTerms = midtermsRes.data.map((m: any) => ({
-                id: String(m.id),
-                name: m.name,
-                dates: Array.from(datesPerMidterm[String(m.id)] || []).sort()
-            }));
-            setTerms(mappedTerms);
-        } catch (error) {
-            console.error("Error refreshing attendance data", error);
-        }
+        // Simply refetch all data from context, forcing a refresh
+        await prefetchAllGroupData(subjectId, groupId, true);
     };
 
     const handleAddColumn = async (termId: string) => {
@@ -322,8 +234,10 @@ const AttendancePage: React.FC = () => {
 
             await Promise.all(promises);
 
-            // Refresh data without page reload
-            await refreshAttendanceData();
+            await Promise.all(promises);
+
+            // Refetch attendance data directly
+            await refetchAttendance(groupId!);
         } catch (error) {
             console.error("Error adding column", error);
             alert("Failed to add attendance column.");
@@ -361,23 +275,16 @@ const AttendancePage: React.FC = () => {
                 });
             }
 
-            // Update local state
-            setAttendanceData(prev => ({
-                ...prev,
-                [studentId]: {
-                    ...prev[studentId],
-                    [midtermId]: {
-                        ...(prev[studentId]?.[midtermId] || {}),
-                        [date]: newVal
-                    }
-                }
-            }));
+            // Update context with optimistic update
+            updateAttendance(studentId, midtermId, date, newVal);
 
             // Auto-navigate to next empty cell
             focusNextEmptyCell(studentId, midtermId, date);
 
-        } catch (e) {
-            console.error("Update failed", e);
+        } catch (error) {
+            console.error("Error updating attendance", error);
+            // On error, refetch to ensure consistency
+            await refreshAttendanceData();
         }
     };
 
@@ -393,14 +300,8 @@ const AttendancePage: React.FC = () => {
             });
 
             // Refresh students list
-            const studentsRes = await api.get(`/v1/students/?group=${groupId}`);
-            const mappedStudents = studentsRes.data.map((s: any) => ({
-                id: String(s.id),
-                name: s.name
-            }));
-            // Sort students alphabetically by name
-            mappedStudents.sort((a: any, b: any) => a.name.localeCompare(b.name));
-            setStudents(mappedStudents);
+            // Refetch students to update list
+            await refetchStudents(groupId!);
 
             // Reset state
             setIsAddingStudent(false);
@@ -428,20 +329,8 @@ const AttendancePage: React.FC = () => {
                 name: editingStudentName.trim()
             });
 
-            // Update student in place and re-sort alphabetically
-            setStudents(prevStudents => {
-                const updatedStudents = prevStudents.map(student => {
-                    if (student.id === studentId) {
-                        return {
-                            ...student,
-                            name: editingStudentName.trim()
-                        };
-                    }
-                    return student;
-                });
-                // Re-sort alphabetically after update
-                return updatedStudents.sort((a, b) => a.name.localeCompare(b.name));
-            });
+            // Refetch students to update list
+            await refetchStudents(groupId!);
 
             setEditingStudentId(null);
             setEditingStudentName('');
@@ -457,10 +346,8 @@ const AttendancePage: React.FC = () => {
             const { default: api } = await import('../../api/client');
             await api.delete(`/v1/students/${studentId}/`);
 
-            // Remove student from local state (already sorted)
-            setStudents(prevStudents =>
-                prevStudents.filter(s => s.id !== studentId)
-            );
+            // Refetch students to update list
+            await refetchStudents(groupId!);
         } catch (error) {
             console.error("Error deleting student", error);
         }
@@ -591,9 +478,9 @@ const AttendancePage: React.FC = () => {
                             <path d="M19 12H5M12 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1>{subjectGroupData?.subjectName || "Loading..."}</h1>
+                    <h1>{groupData?.subjectName || "Loading..."}</h1>
                 </div>
-                <div className="attendance-group">Grupo {subjectGroupData?.groupName || ""}</div>
+                <div className="attendance-group">Grupo {groupData?.groupName || ""}</div>
             </header>
 
             <div className="attendance-content">
@@ -740,9 +627,9 @@ const AttendancePage: React.FC = () => {
                                         });
 
                                         // Check if absences meet or exceed allowed limit
-                                        const exceedsLimit = subjectGroupData?.absencesAllowed !== null &&
-                                            subjectGroupData?.absencesAllowed !== undefined &&
-                                            absences >= subjectGroupData.absencesAllowed;
+                                        const exceedsLimit = groupData?.absencesAllowed !== null &&
+                                            groupData?.absencesAllowed !== undefined &&
+                                            absences >= groupData.absencesAllowed;
 
                                         return (
                                             <td

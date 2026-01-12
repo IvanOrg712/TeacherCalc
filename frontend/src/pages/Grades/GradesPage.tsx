@@ -13,22 +13,41 @@ import './GradesPage.css';
 const GradesPage: React.FC = () => {
     const { subjectId, groupId } = useParams<{ subjectId: string; groupId: string }>();
     const navigate = useNavigate();
-    const { data: subjectGroupData, fetchData } = useSubjectGroup();
+    const { data: groupData, prefetchAllGroupData, updateGrade, deleteGrade, refetchEvaluations } = useSubjectGroup();
 
-    // State
-    const [students, setStudents] = useState<Student[]>([]);
-    const [midterms, setMidterms] = useState<Midterm[]>([]);
-    const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
-    const [activities, setActivities] = useState<Record<string, Activity[]>>({}); // evalId -> activities
-    // Map: studentId -> activityId -> { id: gradeId, score: number }
-    const [gradesMap, setGradesMap] = useState<Record<string, Record<string, { id: number; score: number }>>>({});
+    // Derived values from context
+    const students = groupData?.students || [];
+    const midterms = groupData?.midterms || [];
 
     const [activeMidtermId, setActiveMidtermId] = useState<string | null>(null);
+
+    // Get evaluations and activities for active midterm from context
+    const evaluations = groupData?.evaluationsByMidterm[activeMidtermId || '']?.evaluations || [];
+    const activities = groupData?.evaluationsByMidterm[activeMidtermId || '']?.activities || {};
+    const gradesMap = groupData?.gradesMap || {};
+
     const [gradingConfig, setGradingConfig] = useState<GradingConfig>({
         passingGrade: 6,
         maxGrade: 10,
         gradeScale: 'numeric'
     });
+
+    // Trigger prefetch if data not loaded
+    useEffect(() => {
+        if (!subjectId || !groupId) return;
+
+        // If data not loaded or different group, trigger prefetch
+        if (!groupData?.isFullyLoaded || groupData.groupId !== groupId) {
+            prefetchAllGroupData(subjectId, groupId);
+        }
+    }, [subjectId, groupId, groupData, prefetchAllGroupData]);
+
+    // Set first midterm as active when midterms load
+    useEffect(() => {
+        if (midterms.length > 0 && !activeMidtermId) {
+            setActiveMidtermId(midterms[0].id);
+        }
+    }, [midterms, activeMidtermId]);
 
     // Overlays State
     const [isEvalOverlayOpen, setIsEvalOverlayOpen] = useState(false);
@@ -90,104 +109,7 @@ const GradesPage: React.FC = () => {
         return () => document.removeEventListener('click', handleClick);
     }, []);
 
-    // Fetch Initial Data (Students, Group Info, Midterms)
-    useEffect(() => {
-        const fetchInitialData = async () => {
-            if (!groupId || !subjectId) return;
-            setLoading(true);
-            try {
-                const { default: api } = await import('../../api/client');
-
-                // Fetch Students
-                const studentsRes = await api.get(`/v1/students/?group=${groupId}`);
-                // Map API students to frontend interface
-                const mappedStudents = studentsRes.data.map((s: any) => ({
-                    id: String(s.id),
-                    name: s.name,
-                    attendance: {}
-                }));
-                // Sort students alphabetically by name
-                mappedStudents.sort((a: any, b: any) => a.name.localeCompare(b.name));
-                setStudents(mappedStudents);
-
-                // Fetch Midterms
-                const midtermsRes = await api.get(`/v1/midterms/?group=${groupId}`);
-                const mappedMidterms = midtermsRes.data.map((m: any) => ({
-                    id: String(m.id),
-                    name: m.name,
-                    groupId: String(m.group)
-                }));
-                setMidterms(mappedMidterms);
-                if (mappedMidterms.length > 0) {
-                    setActiveMidtermId(mappedMidterms[0].id);
-                }
-
-                // Fetch Subject/Group info from context (will use cache if available)
-                await fetchData(subjectId, groupId);
-
-
-            } catch (error) {
-                console.error("Error fetching initial data", error);
-                showError("Failed to load class data.");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchInitialData();
-    }, [groupId, subjectId, fetchData]);
-
-    // Fetch Evaluations and Grades when Active Midterm Changes
-    useEffect(() => {
-        const fetchEvalData = async () => {
-            if (!activeMidtermId || !groupId) return;
-            try {
-                const { default: api } = await import('../../api/client');
-
-                // Fetch Evaluations (with nested activities)
-                const evalsRes = await api.get(`/v1/evaluations/?midterm=${activeMidtermId}`);
-                const rawEvals = evalsRes.data;
-
-                const mappedEvals: Evaluation[] = rawEvals.map((e: any) => ({
-                    id: String(e.id),
-                    name: e.name,
-                    midtermId: String(e.midterm),
-                    weightPercentage: Number(e.weight_percentage),
-                    isFixed: Boolean(e.is_fixed)
-                }));
-                setEvaluations(mappedEvals);
-
-                const actsMap: Record<string, Activity[]> = {};
-                rawEvals.forEach((e: any) => {
-                    actsMap[String(e.id)] = (e.activities || []).map((a: any) => ({
-                        id: String(a.id),
-                        name: a.name,
-                        evaluationId: String(e.id),
-                        maxScore: Number(a.max_score || 10),
-                        weightPercentage: Number(a.weight_percentage),
-                        isFixed: Boolean(a.is_fixed),
-                        isExtra: Boolean(a.is_extra_points) // Map extra points flag
-                    }));
-                });
-                setActivities(actsMap);
-
-                // Fetch Grades for the group
-                const gradesRes = await api.get(`/v1/grades/?group=${groupId}`);
-                const map: Record<string, Record<string, { id: number; score: number }>> = {};
-                gradesRes.data.forEach((g: any) => {
-                    const sId = String(g.student);
-                    const aId = String(g.activity);
-                    if (!map[sId]) map[sId] = {};
-                    map[sId][aId] = { id: g.id, score: Number(g.score) };
-                });
-                setGradesMap(map);
-
-            } catch (error) {
-                console.error("Error fetching eval/grades", error);
-                showError("Failed to load evaluations and grades.");
-            }
-        };
-        fetchEvalData();
-    }, [activeMidtermId, groupId]);
+    // Old fetch useEffects removed - all data now comes from context via prefetchAllGroupData
 
 
     // Handlers
@@ -219,10 +141,11 @@ const GradesPage: React.FC = () => {
         try {
             const { default: api } = await import('../../api/client');
             await api.delete(`/v1/evaluations/${evalMenu.evalId}/`);
-            // Refresh
-            const tempM = activeMidtermId;
-            setActiveMidtermId(null);
-            setTimeout(() => setActiveMidtermId(tempM), 10);
+
+            // Refetch evaluations to remove deleted one
+            if (activeMidtermId) {
+                await refetchEvaluations(activeMidtermId);
+            }
         } catch (e) {
             console.error(e);
             showError("Failed to delete evaluation.");
@@ -285,10 +208,11 @@ const GradesPage: React.FC = () => {
 
             setIsEvalOverlayOpen(false);
             setEditingEvalId(null);
-            // Refresh
-            const tempM = activeMidtermId;
-            setActiveMidtermId(null);
-            setTimeout(() => setActiveMidtermId(tempM), 10);
+
+            // Refetch evaluations to show new evaluation
+            if (activeMidtermId) {
+                await refetchEvaluations(activeMidtermId);
+            }
         } catch (error) {
             console.error(error);
             showError("Failed to save evaluation.");
@@ -357,10 +281,11 @@ const GradesPage: React.FC = () => {
             });
 
             setIsActivityOverlayOpen(false);
-            // Refresh logic
-            const tempM = activeMidtermId;
-            setActiveMidtermId(null);
-            setTimeout(() => setActiveMidtermId(tempM), 10);
+
+            // Refetch evaluations to show new activity
+            if (activeMidtermId) {
+                await refetchEvaluations(activeMidtermId);
+            }
         } catch (error) {
             console.error(error);
             showError("Failed to save activity.");
@@ -416,16 +341,8 @@ const GradesPage: React.FC = () => {
                 try {
                     const { default: api } = await import('../../api/client');
                     await api.delete(`/v1/grades/${existingGrade.id}/`);
-                    // Update map locally
-                    setGradesMap(prev => {
-                        const newMap = { ...prev };
-                        if (newMap[studentId]) {
-                            const newStudentGrades = { ...newMap[studentId] };
-                            delete newStudentGrades[activityId];
-                            newMap[studentId] = newStudentGrades;
-                        }
-                        return newMap;
-                    });
+                    // Delete grade using context helper
+                    deleteGrade(studentId, activityId);
                 } catch (e) {
                     console.error("Delete grade failed", e);
                 }
@@ -440,25 +357,16 @@ const GradesPage: React.FC = () => {
             try {
                 const { default: api } = await import('../../api/client');
                 if (existingGrade && existingGrade.id) {
-                    await api.put(`/v1/grades/${existingGrade.id}/`, {
-                        student: studentId,
-                        activity: activityId,
-                        score: numValue
-                    });
+                    // Update grade using context helper
+                    updateGrade(studentId, activityId, existingGrade.id, numValue);
                 } else {
                     const res = await api.post('/v1/grades/', {
                         student: studentId,
                         activity: activityId,
                         score: numValue
                     });
-                    // Update map locally to avoid full re-fetch
-                    setGradesMap(prev => ({
-                        ...prev,
-                        [studentId]: {
-                            ...prev[studentId],
-                            [activityId]: { id: res.data.id, score: numValue }
-                        }
-                    }));
+                    // Update grade using context helper
+                    updateGrade(studentId, activityId, res.data.id, numValue);
                 }
             } catch (e) {
                 console.error("Save grade failed", e);
@@ -594,10 +502,10 @@ const GradesPage: React.FC = () => {
             <header className="grades-header">
                 <div className="header-left">
                     <button className="back-button" onClick={() => navigate('/dashboard')}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg></button>
-                    <h1>{subjectGroupData?.subjectName || "Loading..."}</h1>
+                    <h1>{groupData?.subjectName || "Loading..."}</h1>
                 </div>
 
-                <div className="grades-group">Grupo {subjectGroupData?.groupName || ""}</div>
+                <div className="grades-group">Grupo {groupData?.groupName || ""}</div>
             </header>
 
             <div className="grades-content">
@@ -684,21 +592,8 @@ const GradesPage: React.FC = () => {
                                                                         onChange={(e) => {
                                                                             const newValue = e.target.value;
                                                                             setEditingValue(newValue);
-
-                                                                            // Live update (treat empty as 0)
-                                                                            const numValue = parseFloat(newValue);
-                                                                            if (newValue === '' || (!isNaN(numValue) && numValue >= 0 && numValue <= act.maxScore)) {
-                                                                                setGradesMap(prev => ({
-                                                                                    ...prev,
-                                                                                    [student.id]: {
-                                                                                        ...prev[student.id],
-                                                                                        [act.id]: {
-                                                                                            id: prev[student.id]?.[act.id]?.id || 0,
-                                                                                            score: isNaN(numValue) ? 0 : numValue
-                                                                                        }
-                                                                                    }
-                                                                                }));
-                                                                            }
+                                                                            // Note: Live update removed - gradesMap is now read-only from context
+                                                                            // Actual save happens in handleGradeChange on blur/enter
                                                                         }}
                                                                         onBlur={(e) => {
                                                                             if (navigationRef.current) return;
