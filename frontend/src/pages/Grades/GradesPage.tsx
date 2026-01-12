@@ -7,11 +7,13 @@ import SelectionStatsOverlay from '../../components/features/SelectionStatsOverl
 import NewEvaluationOverlay from '../../components/overlays/NewEvaluationOverlay/NewEvaluationOverlay';
 import NewActivityOverlay from '../../components/overlays/NewActivityOverlay/NewActivityOverlay';
 import ErrorOverlay from '../../components/overlays/ErrorOverlay/ErrorOverlay';
+import { useSubjectGroup } from '../../contexts/SubjectGroupContext';
 import './GradesPage.css';
 
 const GradesPage: React.FC = () => {
     const { subjectId, groupId } = useParams<{ subjectId: string; groupId: string }>();
     const navigate = useNavigate();
+    const { data: subjectGroupData, fetchData } = useSubjectGroup();
 
     // State
     const [students, setStudents] = useState<Student[]>([]);
@@ -22,8 +24,6 @@ const GradesPage: React.FC = () => {
     const [gradesMap, setGradesMap] = useState<Record<string, Record<string, { id: number; score: number }>>>({});
 
     const [activeMidtermId, setActiveMidtermId] = useState<string | null>(null);
-    const [subjectName, setSubjectName] = useState("Loading...");
-    const [groupName, setGroupName] = useState("");
     const [gradingConfig, setGradingConfig] = useState<GradingConfig>({
         passingGrade: 6,
         maxGrade: 10,
@@ -122,16 +122,8 @@ const GradesPage: React.FC = () => {
                     setActiveMidtermId(mappedMidterms[0].id);
                 }
 
-                // Fetch Subject/Group info
-                try {
-                    const subjectRes = await api.get(`/v1/subjects/${subjectId}/`);
-                    setSubjectName(subjectRes.data.name);
-                } catch (e) { console.warn("Subject fetch failed", e); }
-
-                try {
-                    const groupRes = await api.get(`/v1/groups/${groupId}/`);
-                    setGroupName(groupRes.data.name);
-                } catch (e) { console.warn("Group fetch failed", e); }
+                // Fetch Subject/Group info from context (will use cache if available)
+                await fetchData(subjectId, groupId);
 
 
             } catch (error) {
@@ -142,7 +134,7 @@ const GradesPage: React.FC = () => {
             }
         };
         fetchInitialData();
-    }, [groupId, subjectId]);
+    }, [groupId, subjectId, fetchData]);
 
     // Fetch Evaluations and Grades when Active Midterm Changes
     useEffect(() => {
@@ -602,10 +594,10 @@ const GradesPage: React.FC = () => {
             <header className="grades-header">
                 <div className="header-left">
                     <button className="back-button" onClick={() => navigate('/dashboard')}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg></button>
-                    <h1>{subjectName}</h1>
+                    <h1>{subjectGroupData?.subjectName || "Loading..."}</h1>
                 </div>
 
-                <div className="grades-group">Grupo {groupName}</div>
+                <div className="grades-group">Grupo {subjectGroupData?.groupName || ""}</div>
             </header>
 
             <div className="grades-content">

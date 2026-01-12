@@ -8,6 +8,9 @@ const LoginPage: React.FC = () => {
     const [password, setPassword] = useState('');
     const [emailError, setEmailError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [isUnverified, setIsUnverified] = useState(false);
+    const [resendLoading, setResendLoading] = useState(false);
+    const [resendMessage, setResendMessage] = useState('');
     const navigate = useNavigate();
 
     const validateEmail = (email: string) => {
@@ -22,6 +25,8 @@ const LoginPage: React.FC = () => {
             return;
         }
         setEmailError('');
+        setIsUnverified(false);
+        setResendMessage('');
 
         // Real Backend Call
         try {
@@ -32,12 +37,56 @@ const LoginPage: React.FC = () => {
             localStorage.setItem('accessToken', data.access);
             localStorage.setItem('refreshToken', data.refresh);
 
+            // Store user information
+            localStorage.setItem('userName', data.user.name || '');
+            localStorage.setItem('userLastName', data.user.last_name || '');
+            localStorage.setItem('userEmail', data.user.email);
+
             // Navigate to Dashboard
             navigate('/dashboard');
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            // Basic error handling
-            setEmailError('Error al iniciar sesión. Verifique sus credenciales.');
+
+            // Check if error is due to unverified email
+            if (error?.response?.data?.detail) {
+                const errorMessage = error.response.data.detail;
+
+                // Check if it's an email verification error
+                if (errorMessage.includes('verificado') || errorMessage.includes('verifica')) {
+                    setEmailError(errorMessage);
+                    setIsUnverified(true);
+                } else {
+                    setEmailError(errorMessage);
+                    setIsUnverified(false);
+                }
+            } else if (error?.message) {
+                setEmailError(error.message);
+                setIsUnverified(false);
+            } else {
+                setEmailError('Error al iniciar sesión. Verifique sus credenciales.');
+                setIsUnverified(false);
+            }
+        }
+    };
+
+    const handleResendVerification = async () => {
+        if (!email) {
+            setResendMessage('Por favor ingresa tu correo electrónico');
+            return;
+        }
+
+        setResendLoading(true);
+        setResendMessage('');
+
+        try {
+            const { resendVerification } = await import('../../api/auth');
+            await resendVerification(email);
+            setResendMessage('✓ Correo de verificación enviado. Por favor revisa tu bandeja de entrada.');
+        } catch (error: any) {
+            console.error(error);
+            setResendMessage('Error al enviar el correo. Por favor intenta de nuevo.');
+        } finally {
+            setResendLoading(false);
         }
     };
 
@@ -104,6 +153,38 @@ const LoginPage: React.FC = () => {
                         <button type="submit" className="login-btn">
                             Iniciar Sesión
                         </button>
+
+                        {isUnverified && (
+                            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                                <button
+                                    type="button"
+                                    onClick={handleResendVerification}
+                                    disabled={resendLoading}
+                                    style={{
+                                        backgroundColor: '#10b981',
+                                        color: 'white',
+                                        padding: '10px 20px',
+                                        border: 'none',
+                                        borderRadius: '5px',
+                                        cursor: resendLoading ? 'not-allowed' : 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: '600',
+                                        opacity: resendLoading ? 0.6 : 1
+                                    }}
+                                >
+                                    {resendLoading ? 'Enviando...' : 'Reenviar Correo de Verificación'}
+                                </button>
+                                {resendMessage && (
+                                    <p style={{
+                                        marginTop: '10px',
+                                        fontSize: '14px',
+                                        color: resendMessage.includes('✓') ? '#10b981' : '#ef4444'
+                                    }}>
+                                        {resendMessage}
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
                         <div className="signup-link" style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#718096' }}>
                             ¿No tienes una cuenta?{' '}

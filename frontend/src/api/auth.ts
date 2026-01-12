@@ -6,6 +6,11 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     return response.data;
 };
 
+export const resendVerification = async (email: string): Promise<{ message: string }> => {
+    const response = await api.post<{ message: string }>('/auth/resend-verification/', { email });
+    return response.data;
+};
+
 export const logout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');

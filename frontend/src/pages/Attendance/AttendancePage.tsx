@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Student } from '../../@types/models';
+import { useSubjectGroup } from '../../contexts/SubjectGroupContext';
 import './AttendancePage.css';
 
 const AttendancePage: React.FC = () => {
     const { subjectId, groupId } = useParams<{ subjectId: string; groupId: string }>();
     const navigate = useNavigate();
+    const { data: subjectGroupData, fetchData } = useSubjectGroup();
 
     // State
     const [students, setStudents] = useState<Student[]>([]);
-    const [subjectName, setSubjectName] = useState("Loading...");
-    const [groupName, setGroupName] = useState("");
 
     // Terms structure: { id: string, name: string, dates: string[] }
     const [terms, setTerms] = useState<any[]>([]);
@@ -130,9 +130,9 @@ const AttendancePage: React.FC = () => {
             }
 
             // If not part of selection, clear selection and select just this one
-            if (!selectedDates.has(key)) {
-                setSelectedDates(new Set([key]));
-            }
+            setSelectedDates(new Set([key]));
+            setContextMenu({ x: e.pageX, y: e.pageY, type, id, termId, date });
+            return;
         }
 
         setContextMenu({ x: e.pageX, y: e.pageY, type, id, termId, date });
@@ -172,6 +172,10 @@ const AttendancePage: React.FC = () => {
     useEffect(() => {
         const fetchInitialData = async () => {
             if (!subjectId || !groupId) return;
+
+            // Fetch subject/group data from context (will use cache if available)
+            await fetchData(subjectId, groupId);
+
             try {
                 const { default: api } = await import('../../api/client');
 
@@ -220,23 +224,13 @@ const AttendancePage: React.FC = () => {
                 }));
                 setTerms(mappedTerms);
 
-                // Headlines
-                try {
-                    const subjectRes = await api.get(`/v1/subjects/${subjectId}/`);
-                    setSubjectName(subjectRes.data.name);
-                } catch (e) { console.warn(e); }
-                try {
-                    const groupRes = await api.get(`/v1/groups/${groupId}/`);
-                    setGroupName(groupRes.data.name);
-                } catch (e) { console.warn(e); }
-
             } catch (error) {
                 console.error("Error fetching data", error);
             }
         };
 
         fetchInitialData();
-    }, [subjectId, groupId]);
+    }, [subjectId, groupId, fetchData]);
 
     // Function to refresh attendance data without page reload
     const refreshAttendanceData = async () => {
@@ -597,9 +591,9 @@ const AttendancePage: React.FC = () => {
                             <path d="M19 12H5M12 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1>{subjectName}</h1>
+                    <h1>{subjectGroupData?.subjectName || "Loading..."}</h1>
                 </div>
-                <div className="attendance-group">Grupo {groupName}</div>
+                <div className="attendance-group">Grupo {subjectGroupData?.groupName || ""}</div>
             </header>
 
             <div className="attendance-content">
@@ -736,19 +730,34 @@ const AttendancePage: React.FC = () => {
                                             <td style={{ backgroundColor: '#fafafa' }}></td>
                                         </React.Fragment>
                                     ))}
-                                    <td className="total-cell-unified" style={{ textAlign: 'center' }}>
-                                        {/* Calc absences */}
-                                        {(() => {
-                                            let absences = 0;
-                                            terms.forEach(t => {
-                                                t.dates.forEach((d: string) => {
-                                                    const s = getStatus(student.id, t.id, d);
-                                                    if (s === 0) absences++;
-                                                });
+                                    {(() => {
+                                        let absences = 0;
+                                        terms.forEach(t => {
+                                            t.dates.forEach((d: string) => {
+                                                const s = getStatus(student.id, t.id, d);
+                                                if (s === 0) absences++;
                                             });
-                                            return absences;
-                                        })()}
-                                    </td>
+                                        });
+
+                                        // Check if absences meet or exceed allowed limit
+                                        const exceedsLimit = subjectGroupData?.absencesAllowed !== null &&
+                                            subjectGroupData?.absencesAllowed !== undefined &&
+                                            absences >= subjectGroupData.absencesAllowed;
+
+                                        return (
+                                            <td
+                                                className="total-cell-unified"
+                                                style={{
+                                                    textAlign: 'center',
+                                                    backgroundColor: exceedsLimit ? '#ef4444' : undefined,
+                                                    color: exceedsLimit ? 'white' : undefined,
+                                                    fontWeight: exceedsLimit ? 'bold' : undefined
+                                                }}
+                                            >
+                                                {absences}
+                                            </td>
+                                        );
+                                    })()}
                                 </tr>
                             ))}
                             {/* Add Student Row */}

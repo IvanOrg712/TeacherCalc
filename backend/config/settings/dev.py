@@ -18,6 +18,11 @@ DATABASES = {
     )
 }
 
+# Email Configuration for Development
+# Use custom backend that handles SSL certificate issues on macOS
+EMAIL_BACKEND = 'apps.users.email_backend.SSLEmailBackend'
+
 # Add apps/ to PYTHONPATH so we can import apps.core, etc.
 import sys
 sys.path.insert(0, str(BASE_DIR / 'apps'))
+
