@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import './SignupPage.css';
 
 const SignupPage = () => {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -24,28 +26,28 @@ const SignupPage = () => {
 
     const validateForm = () => {
         if (!formData.email || !formData.password) {
-            setError('El correo y la contraseña son obligatorios');
+            setError(t('auth.emailRequired'));
             return false;
         }
 
         if (formData.password !== formData.confirmPassword) {
-            setError('Las contraseñas no coinciden');
+            setError(t('auth.passwordsMismatch'));
             return false;
         }
 
         if (formData.password.length < 8) {
-            setError('La contraseña debe tener al menos 8 caracteres');
+            setError(t('auth.passwordTooShort'));
             return false;
         }
 
         if (!/[a-zA-Z]/.test(formData.password) || !/[0-9]/.test(formData.password)) {
-            setError('La contraseña debe contener letras y números');
+            setError(t('auth.passwordRequirements'));
             return false;
         }
 
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(formData.email)) {
-            setError('Por favor ingresa un correo válido');
+            setError(t('auth.invalidEmail'));
             return false;
         }
 
@@ -79,13 +81,13 @@ const SignupPage = () => {
             const data = await response.json();
 
             if (response.ok) {
-                alert(data.message || '¡Registro exitoso! Por favor revisa tu correo para verificar tu cuenta.');
+                alert(data.message || t('auth.registrationSuccess'));
                 navigate('/login');
             } else {
-                setError(data.error || 'Error en el registro. Por favor intenta de nuevo.');
+                setError(data.error || t('auth.registrationError'));
             }
         } catch (err) {
-            setError('Error de conexión. Por favor verifica tu conexión e intenta de nuevo.');
+            setError(t('auth.connectionError'));
         } finally {
             setLoading(false);
         }
@@ -104,8 +106,8 @@ const SignupPage = () => {
 
                 <div className="signup-form-card">
                     <div className="signup-header">
-                        <h1>Crear cuenta</h1>
-                        <p>Únete a TeacherCalc y simplifica la gestión de calificaciones</p>
+                        <h1>{t('auth.createAccount')}</h1>
+                        <p>{t('auth.joinTeacherCalc')}</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="signup-form">
@@ -117,32 +119,32 @@ const SignupPage = () => {
 
                         <div className="form-row">
                             <div className="form-group">
-                                <label htmlFor="name">Nombre (Opcional)</label>
+                                <label htmlFor="name">{t('auth.name')} {t('auth.optional')}</label>
                                 <input
                                     type="text"
                                     id="name"
                                     name="name"
                                     value={formData.name}
                                     onChange={handleChange}
-                                    placeholder="Juan"
+                                    placeholder={t('auth.namePlaceholder')}
                                 />
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="lastName">Apellido (Opcional)</label>
+                                <label htmlFor="lastName">{t('auth.lastName')} {t('auth.optional')}</label>
                                 <input
                                     type="text"
                                     id="lastName"
                                     name="lastName"
                                     value={formData.lastName}
                                     onChange={handleChange}
-                                    placeholder="Pérez"
+                                    placeholder={t('auth.lastNamePlaceholder')}
                                 />
                             </div>
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="email">Correo Electrónico</label>
+                            <label htmlFor="email">{t('auth.email')}</label>
                             <input
                                 type="email"
                                 id="email"
@@ -150,12 +152,12 @@ const SignupPage = () => {
                                 value={formData.email}
                                 onChange={handleChange}
                                 required
-                                placeholder="nombre@ejemplo.com"
+                                placeholder={t('auth.emailPlaceholder')}
                             />
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="password">Contraseña</label>
+                            <label htmlFor="password">{t('auth.password')}</label>
                             <input
                                 type="password"
                                 id="password"
@@ -163,15 +165,15 @@ const SignupPage = () => {
                                 value={formData.password}
                                 onChange={handleChange}
                                 required
-                                placeholder="Mínimo 8 caracteres"
+                                placeholder={t('auth.passwordMinimum')}
                             />
                             <small className="form-hint">
-                                Debe tener al menos 8 caracteres con letras y números
+                                {t('auth.passwordHint')}
                             </small>
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="confirmPassword">Confirmar Contraseña</label>
+                            <label htmlFor="confirmPassword">{t('auth.confirmPassword')}</label>
                             <input
                                 type="password"
                                 id="confirmPassword"
@@ -179,7 +181,7 @@ const SignupPage = () => {
                                 value={formData.confirmPassword}
                                 onChange={handleChange}
                                 required
-                                placeholder="Vuelve a ingresar tu contraseña"
+                                placeholder={t('auth.reenterPassword')}
                             />
                         </div>
 
@@ -188,16 +190,16 @@ const SignupPage = () => {
                             className="signup-button"
                             disabled={loading}
                         >
-                            {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
+                            {loading ? t('auth.creatingAccount') : t('auth.createAccountButton')}
                         </button>
 
                         <div className="login-link">
-                            ¿Ya tienes una cuenta?{' '}
+                            {t('auth.alreadyHaveAccount')}{' '}
                             <a href="/login" onClick={(e) => {
                                 e.preventDefault();
                                 navigate('/login');
                             }}>
-                                Inicia sesión
+                                {t('auth.signIn')}
                             </a>
                         </div>
                     </form>

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import './LoginPage.css';
-import { useNavigate }
-    from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const LoginPage: React.FC = () => {
+    const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [emailError, setEmailError] = useState('');
@@ -21,7 +22,7 @@ const LoginPage: React.FC = () => {
         e.preventDefault();
 
         if (!validateEmail(email)) {
-            setEmailError('Por favor ingresa un correo válido');
+            setEmailError(t('auth.invalidEmail'));
             return;
         }
         setEmailError('');
@@ -63,7 +64,7 @@ const LoginPage: React.FC = () => {
                 setEmailError(error.message);
                 setIsUnverified(false);
             } else {
-                setEmailError('Error al iniciar sesión. Verifique sus credenciales.');
+                setEmailError(t('auth.loginError'));
                 setIsUnverified(false);
             }
         }
@@ -71,7 +72,7 @@ const LoginPage: React.FC = () => {
 
     const handleResendVerification = async () => {
         if (!email) {
-            setResendMessage('Por favor ingresa tu correo electrónico');
+            setResendMessage(t('auth.resendPrompt'));
             return;
         }
 
@@ -81,10 +82,10 @@ const LoginPage: React.FC = () => {
         try {
             const { resendVerification } = await import('../../api/auth');
             await resendVerification(email);
-            setResendMessage('✓ Correo de verificación enviado. Por favor revisa tu bandeja de entrada.');
+            setResendMessage(t('auth.resendSuccess'));
         } catch (error: any) {
             console.error(error);
-            setResendMessage('Error al enviar el correo. Por favor intenta de nuevo.');
+            setResendMessage(t('auth.resendError'));
         } finally {
             setResendLoading(false);
         }
@@ -103,17 +104,17 @@ const LoginPage: React.FC = () => {
 
                 <div className="login-form-card">
                     <div className="form-header">
-                        <h1>Bienvenido</h1>
-                        <p>Inicia sesión para continuar</p>
+                        <h1>{t('auth.welcomeBack')}</h1>
+                        <p>{t('auth.loginToContinue')}</p>
                     </div>
 
                     <form onSubmit={handleLogin}>
                         <div className="input-group">
-                            <label htmlFor="email">Correo Electrónico</label>
+                            <label htmlFor="email">{t('auth.email')}</label>
                             <input
                                 type="email"
                                 id="email"
-                                placeholder="nombre@ejemplo.com"
+                                placeholder={t('auth.emailPlaceholder')}
                                 value={email}
                                 onChange={(e) => {
                                     setEmail(e.target.value);
@@ -126,12 +127,12 @@ const LoginPage: React.FC = () => {
                         </div>
 
                         <div className="input-group" style={{ marginTop: '1rem' }}>
-                            <label htmlFor="password">Contraseña</label>
+                            <label htmlFor="password">{t('auth.password')}</label>
                             <div className="password-wrapper">
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     id="password"
-                                    placeholder="••••••••"
+                                    placeholder={t('auth.passwordPlaceholder')}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
@@ -141,17 +142,17 @@ const LoginPage: React.FC = () => {
                                     className="password-toggle"
                                     onClick={() => setShowPassword(!showPassword)}
                                 >
-                                    {showPassword ? "Ocultar" : "Mostrar"}
+                                    {showPassword ? t('auth.hide') : t('auth.show')}
                                 </button>
                             </div>
                         </div>
 
                         <div className="forgot-password">
-                            Olvidé mi contraseña
+                            {t('auth.forgotPassword')}
                         </div>
 
                         <button type="submit" className="login-btn">
-                            Iniciar Sesión
+                            {t('auth.login')}
                         </button>
 
                         {isUnverified && (
@@ -172,7 +173,7 @@ const LoginPage: React.FC = () => {
                                         opacity: resendLoading ? 0.6 : 1
                                     }}
                                 >
-                                    {resendLoading ? 'Enviando...' : 'Reenviar Correo de Verificación'}
+                                    {resendLoading ? t('auth.sendingEmail') : t('auth.resendVerification')}
                                 </button>
                                 {resendMessage && (
                                     <p style={{
@@ -187,12 +188,12 @@ const LoginPage: React.FC = () => {
                         )}
 
                         <div className="signup-link" style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#718096' }}>
-                            ¿No tienes una cuenta?{' '}
+                            {t('auth.dontHaveAccount')}{' '}
                             <a href="/signup" onClick={(e) => {
                                 e.preventDefault();
                                 navigate('/signup');
                             }} style={{ color: '#667eea', textDecoration: 'none', fontWeight: '600' }}>
-                                Regístrate
+                                {t('auth.signUp')}
                             </a>
                         </div>
                     </form>

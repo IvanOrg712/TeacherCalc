@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import './VerifyEmailPage.css';
 
 const VerifyEmailPage = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { t } = useTranslation();
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
     const [message, setMessage] = useState('');
 
@@ -14,7 +16,7 @@ const VerifyEmailPage = () => {
 
             if (!token) {
                 setStatus('error');
-                setMessage('Enlace de verificación inválido. Por favor revisa tu correo e intenta de nuevo.');
+                setMessage(t('auth.invalidVerificationLink'));
                 return;
             }
 
@@ -24,7 +26,7 @@ const VerifyEmailPage = () => {
 
                 if (response.ok) {
                     setStatus('success');
-                    setMessage(data.message || '¡Correo verificado exitosamente!');
+                    setMessage(data.message || t('auth.emailVerified'));
 
                     // Redirect to login after 3 seconds
                     setTimeout(() => {
@@ -32,11 +34,11 @@ const VerifyEmailPage = () => {
                     }, 3000);
                 } else {
                     setStatus('error');
-                    setMessage(data.error || 'La verificación falló. Por favor intenta de nuevo.');
+                    setMessage(data.error || t('auth.verificationFailedMessage'));
                 }
             } catch (err) {
                 setStatus('error');
-                setMessage('Error de conexión. Por favor verifica tu conexión e intenta de nuevo.');
+                setMessage(t('auth.connectionError'));
             }
         };
 
@@ -49,22 +51,22 @@ const VerifyEmailPage = () => {
                 {status === 'loading' && (
                     <div className="verify-content">
                         <div className="spinner"></div>
-                        <h1>Verificando tu correo...</h1>
-                        <p>Por favor espera mientras verificamos tu cuenta.</p>
+                        <h1>{t('auth.verifyingEmail')}</h1>
+                        <p>{t('auth.pleaseWait')}</p>
                     </div>
                 )}
 
                 {status === 'success' && (
                     <div className="verify-content success">
                         <div className="success-icon">✓</div>
-                        <h1>¡Correo Verificado!</h1>
+                        <h1>{t('auth.emailVerified')}</h1>
                         <p>{message}</p>
-                        <p className="redirect-message">Redirigiendo a la página de inicio de sesión...</p>
+                        <p className="redirect-message">{t('auth.redirectingToLogin')}</p>
                         <button
                             className="verify-button"
                             onClick={() => navigate('/login')}
                         >
-                            Ir a Iniciar Sesión
+                            {t('auth.goToLogin')}
                         </button>
                     </div>
                 )}
@@ -72,20 +74,20 @@ const VerifyEmailPage = () => {
                 {status === 'error' && (
                     <div className="verify-content error">
                         <div className="error-icon">✕</div>
-                        <h1>Verificación Fallida</h1>
+                        <h1>{t('auth.verificationFailed')}</h1>
                         <p>{message}</p>
                         <div className="error-actions">
                             <button
                                 className="verify-button"
                                 onClick={() => navigate('/login')}
                             >
-                                Ir a Iniciar Sesión
+                                {t('auth.goToLogin')}
                             </button>
                             <button
                                 className="verify-button secondary"
                                 onClick={() => navigate('/signup')}
                             >
-                                Registrarse de Nuevo
+                                {t('auth.registerAgain')}
                             </button>
                         </div>
                     </div>
