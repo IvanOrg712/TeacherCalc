@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { Student } from '../../@types/models';
 import { useSubjectGroup } from '../../contexts/SubjectGroupContext';
 import './AttendancePage.css';
 
@@ -457,10 +456,6 @@ const AttendancePage: React.FC = () => {
         setNewDate('');
     };
 
-    const handleGradesClick = () => {
-        navigate(`/grades/${subjectId}/${groupId}`);
-    };
-
     const getStatus = (studentId: string, midtermId: string, date: string) => {
         return attendanceData[studentId]?.[midtermId]?.[date] ?? null;
     };
@@ -590,7 +585,7 @@ const AttendancePage: React.FC = () => {
                                                                 min="0"
                                                                 max="1"
                                                                 value={val}
-                                                                onChange={(e) => { }} // Controlled by onKeyDown or native
+                                                                onChange={() => { }} // Controlled by onKeyDown or native
                                                                 onKeyDown={(e) => {
                                                                     const key = e.key;
                                                                     if (key === '0' || key === '1') {

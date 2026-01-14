@@ -83,7 +83,7 @@ const Dashboard: React.FC = () => {
 
             if (selectedSchool) {
                 // Update existing school
-                const response = await api.put(`/v1/schools/${selectedSchool.id}/`, payload);
+                await api.put(`/v1/schools/${selectedSchool.id}/`, payload);
 
                 // Update school in place to maintain order
                 setSchools(prevSchools =>
@@ -177,7 +177,7 @@ const Dashboard: React.FC = () => {
                         school.id === selectedSchoolIdForSubject
                             ? {
                                 ...school,
-                                subjects: school.subjects.map(subject =>
+                                subjects: school.subjects.map((subject: { id: string; name: string; groups?: { id: string; name: string }[] }) =>
                                     subject.id === selectedSubject.id
                                         ? {
                                             ...subject,

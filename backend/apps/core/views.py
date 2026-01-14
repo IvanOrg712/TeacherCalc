@@ -1,5 +1,5 @@
 from rest_framework import viewsets, permissions
-from .models import Schools, Subjects, Groups, Students, GroupStudents, Midterms, Evaluations, Activities, Grades, Attendance
+from .models import Schools, Subjects, Groups, Students, Midterms, Evaluations, Activities, Grades, Attendance
 from .serializers import (
     SchoolSerializer, SubjectSerializer, GroupSerializer, MidtermSerializer,
     StudentSerializer, EvaluationSerializer, ActivitySerializer, GradeSerializer,

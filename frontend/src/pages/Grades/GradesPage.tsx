@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { Student, Midterm, Evaluation, Activity, GradingConfig } from '../../@types/models';
+import type { GradingConfig } from '../../@types/models';
 import { useTableSelection } from '../../hooks/useTableSelection';
-import { calculateAllStats } from '../../utils/statsUtils';
-import SelectionStatsOverlay from '../../components/features/SelectionStatsOverlay/SelectionStatsOverlay';
 import NewEvaluationOverlay from '../../components/overlays/NewEvaluationOverlay/NewEvaluationOverlay';
 import NewActivityOverlay from '../../components/overlays/NewActivityOverlay/NewActivityOverlay';
 import ErrorOverlay from '../../components/overlays/ErrorOverlay/ErrorOverlay';
@@ -28,7 +26,7 @@ const GradesPage: React.FC = () => {
     const activities = groupData?.evaluationsByMidterm[activeMidtermId || '']?.activities || {};
     const gradesMap = groupData?.gradesMap || {};
 
-    const [gradingConfig, setGradingConfig] = useState<GradingConfig>({
+    const [gradingConfig] = useState<GradingConfig>({
         passingGrade: 6,
         maxGrade: 10,
         gradeScale: 'numeric'
@@ -106,7 +104,7 @@ const GradesPage: React.FC = () => {
     // Ref for the table container to detect clicks outside
     const tableContainerRef = useRef<HTMLDivElement>(null);
 
-    const [loading, setLoading] = useState(false);
+    const [loading] = useState(false);
 
     // Close context menus on click elsewhere
     useEffect(() => {
@@ -208,11 +206,9 @@ const GradesPage: React.FC = () => {
 
         // Validation: Check total fixed weight
         let currentFixedWeight = 0;
-        let currentTotalWeight = 0;
         evaluations.forEach(ev => {
             if (editingEvalId && ev.id === editingEvalId) return;
             if (ev.isFixed) currentFixedWeight += ev.weightPercentage;
-            currentTotalWeight += ev.weightPercentage;
         });
 
         // 1. Check if sum of fixed weights > 100
@@ -375,8 +371,7 @@ const GradesPage: React.FC = () => {
 
     const totalCols = columnStructure.length;
     const [selectionMode, setSelectionMode] = useState<'activity' | 'final' | null>(null);
-    const [pendingSelection, setPendingSelection] = useState<any>(null);
-    const finalColIndex = useMemo(() => columnStructure.findIndex(col => col.type === 'final'), [columnStructure]);
+    const [, setPendingSelection] = useState<{ type: string; row: number; col: number; shiftKey: boolean } | null>(null);
 
     // Selectable Logic
     const isSelectable = useCallback((_row: number, col: number): boolean => {
@@ -387,8 +382,8 @@ const GradesPage: React.FC = () => {
         return colInfo.type === selectionMode;
     }, [columnStructure, selectionMode]);
 
-    const { selectedCells, handleCellMouseDown, handleCellMouseEnter, handleMouseUp,
-        handleRowSelect, handleColumnSelect, clearSelection, isSelected
+    const { handleCellMouseDown, handleCellMouseEnter, handleMouseUp,
+        clearSelection, isSelected
     } = useTableSelection({ totalRows: students.length, totalCols, isSelectable });
 
     // Handle grade change (save to API)
@@ -464,10 +459,9 @@ const GradesPage: React.FC = () => {
                 // Result is contribution to grade (0-100 scale within evaluation)
 
                 let totalContribution = 0; // Sum of (grade/max * weight)
-                let totalWeightProcessed = 0;
 
                 // Helper to process activity
-                const processActivity = (act: any, weight: number) => {
+                const processActivity = (act: { id: string; maxScore: number; isExtra: boolean }, weight: number) => {
                     const gradeData = gradesMap[student.id]?.[act.id];
                     if (gradeData) {
                         const scoreRatio = gradeData.score / act.maxScore; // 0 to 1
@@ -476,10 +470,6 @@ const GradesPage: React.FC = () => {
                         totalContribution += scoreRatio * weight;
                     }
                     // If no grade, contribution is 0 (assumed 0 or missing)
-                    // Logic: "Final grade will be sum of products..."
-                    if (!act.isExtra) {
-                        totalWeightProcessed += weight;
-                    }
                 };
 
                 // Process Fixed (Normal)
@@ -595,9 +585,9 @@ const GradesPage: React.FC = () => {
                                     </th>
                                 </tr>
                                 <tr>
-                                    {evaluations.map((ev, evIdx) => (
+                                    {evaluations.map((ev) => (
                                         <React.Fragment key={ev.id}>
-                                            {activities[ev.id]?.map((act, actIdx) => (
+                                            {activities[ev.id]?.map((act) => (
                                                 <th key={act.id} className="unified-header-vertical"
                                                     onContextMenu={(e) => handleActivityContextMenu(e, ev.id, act.id)}
                                                     onMouseEnter={(e) => handleTooltipEnter(e, 'activity', { ...act, parentEvalId: ev.id })}
