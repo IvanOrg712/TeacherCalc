@@ -22,8 +22,11 @@
     background: white;
     border-radius: 4px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
+    overflow: auto;
+    /* Allow scrolling both horizontally and vertically */
     max-width: 100%;
+    position: relative;
+    /* For sticky positioning */
 }
 
 .unified-table {
@@ -45,8 +48,8 @@
 .unified-header-main {
     background-color: var(--table-header-bg);
     color: var(--table-header-color);
-    padding: 0 24px;
-    /* Match student column padding */
+    padding: 0 40px;
+    /* Increased horizontal padding for better spacing */
     height: 40px;
     font-weight: 500;
     border-color: #555;
@@ -89,6 +92,13 @@
     color: var(--text-primary);
     white-space: nowrap;
     height: 40px;
+
+    /* Sticky positioning for horizontal scroll */
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    border-right: 2px solid #ddd;
+    /* Visual separation */
 }
 
 /* --- Input Cells --- */
@@ -222,9 +232,32 @@
     font-weight: bold;
     cursor: pointer;
     min-width: 60px;
+    max-width: 60px;
+    width: 60px;
     /* Match other column widths */
 }
 
 .add-btn-cell:hover {
     background-color: #d0d0d0;
+}
+
+/* Activity columns - constrain width to match button */
+.unified-table thead .unified-header-vertical {
+    min-width: 60px !important;
+    max-width: 60px !important;
+    width: 60px !important;
+}
+
+/* Final grade header styling */
+.unified-table thead .final-header {
+    background-color: var(--table-subheader-bg);
+    min-width: 80px !important;
+    max-width: 80px !important;
+    width: 80px !important;
+}
+/* Selected Header Style */
+.unified-header-vertical.selected {
+    background-color: #e3f2fd !important;
+    border-bottom: 3px solid #2196f3 !important;
+    color: #1565c0;
 }

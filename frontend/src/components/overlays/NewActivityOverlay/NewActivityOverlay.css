@@ -1,0 +1,18 @@
+.activity-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.overlay-textarea {
+    background-color: #f5f5f5;
+    border: none;
+    padding: 0.8rem 1rem;
+    font-size: 1rem;
+    border-radius: 4px;
+    width: 100%;
+    color: #666;
+    resize: none;
+    height: 80px;
+    font-family: inherit;
+}

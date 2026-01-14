@@ -263,7 +263,7 @@ CREATE TABLE attendance (
     group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
     midterm_id INTEGER NOT NULL REFERENCES midterms(id) ON DELETE CASCADE,
     date DATE NOT NULL,
-    status SMALLINT NOT NULL CHECK (status IN (0, 1)),
+    status SMALLINT CHECK (status IN (0, 1)),
     UNIQUE(student_id, group_id, midterm_id, date)
 );
 ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
