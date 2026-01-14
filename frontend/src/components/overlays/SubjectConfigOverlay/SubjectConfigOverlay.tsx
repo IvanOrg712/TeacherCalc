@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import Modal from '../../common/Modal/Modal';
 import './SubjectConfigOverlay.css';
 
@@ -22,6 +23,7 @@ const SubjectConfigOverlay: React.FC<SubjectConfigOverlayProps> = ({
     onSave,
     initialData
 }) => {
+    const { t } = useTranslation();
     const [name, setName] = useState('');
     const [absencesAllowed, setAbsencesAllowed] = useState<string>('8');
     const [groupCount, setGroupCount] = useState<string>('1');
@@ -54,7 +56,7 @@ const SubjectConfigOverlay: React.FC<SubjectConfigOverlayProps> = ({
         const count = Number(groupCount);
 
         if (names.length !== count) {
-            setError(`Expected ${count} group names, but found ${names.length}.`);
+            setError(t('subject.groupCountMismatch', { expected: count, found: names.length }));
             return;
         }
         setError('');
@@ -81,14 +83,14 @@ const SubjectConfigOverlay: React.FC<SubjectConfigOverlayProps> = ({
                 <input
                     type="text"
                     className="overlay-input"
-                    placeholder="Nombre de la materia"
+                    placeholder={t('subject.name')}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     autoFocus
                 />
 
                 <div className="input-row">
-                    <label>¿Cuántas faltas tiene permitidas?</label>
+                    <label>{t('subject.absencesAllowed')}</label>
                     <input
                         type="number"
                         className="overlay-input-small"
@@ -98,7 +100,7 @@ const SubjectConfigOverlay: React.FC<SubjectConfigOverlayProps> = ({
                 </div>
 
                 <div className="input-row">
-                    <label>¿Cuantos grupos tiene?</label>
+                    <label>{t('subject.groupCount')}</label>
                     <input
                         type="number"
                         className="overlay-input-small"
@@ -110,7 +112,7 @@ const SubjectConfigOverlay: React.FC<SubjectConfigOverlayProps> = ({
                 <input
                     type="text"
                     className="overlay-input"
-                    placeholder="Escriba los nombres de los grupos separados por comas"
+                    placeholder={t('subject.groupNamesPlaceholder')}
                     value={groupNames}
                     onChange={(e) => setGroupNames(e.target.value)}
                 />
@@ -118,7 +120,7 @@ const SubjectConfigOverlay: React.FC<SubjectConfigOverlayProps> = ({
                 {error && <div className="error-message">{error}</div>}
 
                 <button className="create-btn" onClick={handleSave}>
-                    {initialData ? 'Guardar Cambios' : 'Crear Materia'}
+                    {initialData ? t('common.save') : t('subject.createSubject')}
                 </button>
             </div>
         </Modal>

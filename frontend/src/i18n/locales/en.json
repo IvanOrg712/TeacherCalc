@@ -1,0 +1,130 @@
+{
+    "common": {
+        "loading": "Loading...",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "confirm": "Confirm",
+        "create": "Create",
+        "add": "Add",
+        "back": "Back",
+        "close": "Close"
+    },
+    "nav": {
+        "dashboard": "Dashboard",
+        "logout": "Logout"
+    },
+    "auth": {
+        "login": "Login",
+        "register": "Register",
+        "email": "Email",
+        "password": "Password",
+        "name": "Name",
+        "lastName": "Last Name",
+        "confirmPassword": "Confirm Password",
+        "forgotPassword": "Forgot your password?",
+        "rememberMe": "Remember me",
+        "dontHaveAccount": "Don't have an account?",
+        "alreadyHaveAccount": "Already have an account?",
+        "emailNotVerified": "Your email is not verified. Please verify your email before logging in.",
+        "resendVerification": "Resend Verification"
+    },
+    "dashboard": {
+        "title": "Dashboard",
+        "subjects": "Subjects",
+        "groups": "Groups",
+        "addSchool": "+ School",
+        "addSubject": "+ Add Subject",
+        "welcome": "Welcome",
+        "errorFetchingSchools": "Error fetching schools. Please try again.",
+        "errorSavingSchool": "Error saving school.",
+        "errorSavingSubject": "Error saving subject.",
+        "confirmDeleteSubject": "Are you sure you want to delete this subject?",
+        "editSubject": "Edit Subject",
+        "deleteSubject": "Delete Subject",
+        "attendance": "Attendance",
+        "grades": "Grades"
+    },
+    "school": {
+        "name": "School name",
+        "passingGrade": "Passing grade",
+        "midtermCount": "Number of midterms",
+        "createSchool": "Create School",
+        "editSchool": "Edit School"
+    },
+    "subject": {
+        "name": "Subject name",
+        "createSubject": "Create Subject",
+        "editSubject": "Edit Subject",
+        "absencesAllowed": "How many absences are allowed?",
+        "groupCount": "How many groups?",
+        "groupNamesPlaceholder": "Enter group names separated by commas",
+        "groupCountMismatch": "Expected {{expected}} group names, but found {{found}}."
+    },
+    "midterm": {
+        "midterm": "Midterm",
+        "midterms": "Midterms"
+    },
+    "attendance": {
+        "title": "Attendance",
+        "studentName": "Student Name",
+        "absences": "Absences",
+        "addDate": "Add Date",
+        "editDate": "Edit Attendance Date",
+        "selectNewDate": "Select a new date (future dates only):",
+        "confirmDelete": "Are you sure you want to delete attendance for {{date}}?",
+        "confirmDeleteColumns": "Are you sure you want to delete {{count}} columns?",
+        "confirmDeleteStudent": "Are you sure you want to delete this student?",
+        "editStudent": "Edit",
+        "deleteStudent": "Delete",
+        "deleteColumns": "Delete {{count}} Columns",
+        "failedToAddColumn": "Failed to add attendance column.",
+        "failedToUpdateDate": "Failed to update date.",
+        "group": "Group"
+    },
+    "grades": {
+        "title": "Grades",
+        "studentName": "Student Name",
+        "final": "Final",
+        "addEvaluation": "+ Evaluation",
+        "addActivity": "Create Activity",
+        "scale": "Scale",
+        "weight": "Weight",
+        "fixed": "Fixed",
+        "automatic": "Automatic",
+        "extraPoints": "Extra Points",
+        "confirmDeleteActivity": "Delete this activity? All associated grades will be deleted.",
+        "confirmDeleteEvaluation": "Are you sure you want to delete this evaluation?",
+        "deleteActivity": "Delete Activity",
+        "editEvaluation": "Edit Evaluation",
+        "deleteEvaluation": "Delete Evaluation",
+        "maxValueError": "The maximum value for this activity is {{max}}",
+        "minValueError": "The minimum value is 0",
+        "failedToDeleteEvaluation": "Failed to delete evaluation.",
+        "failedToDeleteActivity": "Failed to delete activity.",
+        "failedToSaveActivity": "Failed to save activity.",
+        "totalFixedWeightExceeded": "Total fixed weight cannot exceed 100%.",
+        "warningFixedWeightFull": "Warning: Fixed weights sum to 100%. This activity will have 0% weight.",
+        "rightClickToDelete": "Right-click to delete",
+        "rightClickToEditDelete": "Right-click to edit/delete",
+        "group": "Group",
+        "editActivity": "Edit Activity"
+    },
+    "evaluation": {
+        "name": "Evaluation name",
+        "hasFixedValue": "Has a fixed value?",
+        "valuePlaceholder": "Value (%)",
+        "createEvaluation": "Create Evaluation",
+        "editEvaluation": "Edit Evaluation"
+    },
+    "activity": {
+        "name": "Activity name",
+        "description": "Description",
+        "hasFixedValue": "Has a fixed value?",
+        "valuePlaceholder": "Value (%)",
+        "scalePlaceholder": "Scale (e.g., 0 - 30)",
+        "isExtra": "Is extra activity?",
+        "createActivity": "Create Activity"
+    }
+}

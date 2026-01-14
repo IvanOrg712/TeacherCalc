@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import './Navbar.css';
 
 interface NavbarProps {
@@ -8,6 +9,7 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ userName }) => {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const [displayName, setDisplayName] = useState<string>('');
 
     useEffect(() => {
@@ -20,7 +22,7 @@ const Navbar: React.FC<NavbarProps> = ({ userName }) => {
             if (storedName) {
                 setDisplayName(storedName);
             } else {
-                setDisplayName('Usuario');
+                setDisplayName(t('dashboard.welcome'));
             }
         }
     }, [userName]);
@@ -37,10 +39,10 @@ const Navbar: React.FC<NavbarProps> = ({ userName }) => {
                 Logo de la Empresa
             </div>
             <div className="navbar-right">
-                <span className="navbar-user">Bienvenido, {displayName}</span>
+                <span className="navbar-user">{t('dashboard.welcome')}, {displayName}</span>
                 <span className="navbar-separator">|</span>
                 <button className="signout-button" onClick={handleSignOut}>
-                    Cerrar Sesión
+                    {t('nav.logout')}
                 </button>
             </div>
         </nav>

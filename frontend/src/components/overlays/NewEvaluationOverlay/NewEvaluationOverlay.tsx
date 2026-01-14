@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Modal from '../../common/Modal/Modal';
 import './NewEvaluationOverlay.css';
 
@@ -11,6 +12,7 @@ interface NewEvaluationOverlayProps {
 }
 
 const NewEvaluationOverlay: React.FC<NewEvaluationOverlayProps> = ({ isOpen, onClose, onSave, initialData, isEditing = false }) => {
+    const { t } = useTranslation();
     const [name, setName] = useState('');
     const [isFixed, setIsFixed] = useState(false);
     const [weight, setWeight] = useState<string>('');
@@ -42,7 +44,7 @@ const NewEvaluationOverlay: React.FC<NewEvaluationOverlayProps> = ({ isOpen, onC
                 <input
                     type="text"
                     className="overlay-input"
-                    placeholder="Nombre de la evaluación"
+                    placeholder={t('evaluation.name')}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     autoFocus
@@ -55,21 +57,21 @@ const NewEvaluationOverlay: React.FC<NewEvaluationOverlayProps> = ({ isOpen, onC
                         onChange={(e) => setIsFixed(e.target.checked)}
                         id="eval-fixed"
                     />
-                    <label htmlFor="eval-fixed">¿Tiene un valor fijo?</label>
+                    <label htmlFor="eval-fixed">{t('evaluation.hasFixedValue')}</label>
                 </div>
 
                 {isFixed && (
                     <input
                         type="number"
                         className="overlay-input"
-                        placeholder="Valor de la evaluación (%)"
+                        placeholder={t('evaluation.valuePlaceholder')}
                         value={weight}
                         onChange={(e) => setWeight(e.target.value)}
                     />
                 )}
 
                 <button className="create-btn" onClick={handleSave}>
-                    Crear Evaluación
+                    {isEditing ? t('evaluation.editEvaluation') : t('evaluation.createEvaluation')}
                 </button>
             </div>
         </Modal>

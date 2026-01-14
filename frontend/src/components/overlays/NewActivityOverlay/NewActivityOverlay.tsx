@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Modal from '../../common/Modal/Modal';
 import './NewActivityOverlay.css';
 
@@ -6,15 +7,44 @@ interface NewActivityOverlayProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (data: any) => void;
+    initialData?: {
+        name: string;
+        description: string;
+        isFixed: boolean;
+        weight: number;
+        scale: string;
+        isExtra: boolean;
+    };
 }
 
-const NewActivityOverlay: React.FC<NewActivityOverlayProps> = ({ isOpen, onClose, onSave }) => {
+const NewActivityOverlay: React.FC<NewActivityOverlayProps> = ({ isOpen, onClose, onSave, initialData }) => {
+    const { t } = useTranslation();
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [isFixed, setIsFixed] = useState(false);
     const [weight, setWeight] = useState('');
     const [scale, setScale] = useState('');
     const [isExtra, setIsExtra] = useState(false);
+
+    // Populate form when editing
+    React.useEffect(() => {
+        if (isOpen && initialData) {
+            setName(initialData.name);
+            setDescription(initialData.description);
+            setIsFixed(initialData.isFixed);
+            setWeight(String(initialData.weight));
+            setScale(initialData.scale);
+            setIsExtra(initialData.isExtra);
+        } else if (isOpen && !initialData) {
+            // Reset form for new activity
+            setName('');
+            setDescription('');
+            setIsFixed(false);
+            setWeight('');
+            setScale('');
+            setIsExtra(false);
+        }
+    }, [isOpen, initialData]);
 
     const handleExtraChange = (checked: boolean) => {
         setIsExtra(checked);
@@ -41,14 +71,14 @@ const NewActivityOverlay: React.FC<NewActivityOverlayProps> = ({ isOpen, onClose
                 <input
                     type="text"
                     className="overlay-input"
-                    placeholder="Nombre de la actividad"
+                    placeholder={t('activity.name')}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                 />
 
                 <textarea
                     className="overlay-textarea"
-                    placeholder="Descripción"
+                    placeholder={t('activity.description')}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                 />
@@ -60,14 +90,14 @@ const NewActivityOverlay: React.FC<NewActivityOverlayProps> = ({ isOpen, onClose
                         onChange={(e) => setIsFixed(e.target.checked)}
                         disabled={isExtra}
                     />
-                    <label>¿Tiene un valor fijo?</label>
+                    <label>{t('activity.hasFixedValue')}</label>
                 </div>
 
                 {isFixed && (
                     <input
                         type="number"
                         className="overlay-input"
-                        placeholder="Valor (%)"
+                        placeholder={t('activity.valuePlaceholder')}
                         value={weight}
                         onChange={(e) => setWeight(e.target.value)}
                     />
@@ -76,7 +106,7 @@ const NewActivityOverlay: React.FC<NewActivityOverlayProps> = ({ isOpen, onClose
                 <input
                     type="text"
                     className="overlay-input"
-                    placeholder="Escala (ej: 0 - 30)"
+                    placeholder={t('activity.scalePlaceholder')}
                     value={scale}
                     onChange={(e) => setScale(e.target.value)}
                 />
@@ -87,11 +117,11 @@ const NewActivityOverlay: React.FC<NewActivityOverlayProps> = ({ isOpen, onClose
                         checked={isExtra}
                         onChange={(e) => handleExtraChange(e.target.checked)}
                     />
-                    <label>¿Es actividad extra?</label>
+                    <label>{t('activity.isExtra')}</label>
                 </div>
 
                 <button className="create-btn" onClick={handleSave}>
-                    Crear Actividad
+                    {t('activity.createActivity')}
                 </button>
             </div>
         </Modal>

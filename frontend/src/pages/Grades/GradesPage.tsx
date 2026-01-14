@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import type { Student, Midterm, Evaluation, Activity, GradingConfig } from '../../@types/models';
 import { useTableSelection } from '../../hooks/useTableSelection';
 import { calculateAllStats } from '../../utils/statsUtils';
@@ -13,6 +14,7 @@ import './GradesPage.css';
 const GradesPage: React.FC = () => {
     const { subjectId, groupId } = useParams<{ subjectId: string; groupId: string }>();
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const { data: groupData, prefetchAllGroupData, updateGrade, deleteGrade, refetchEvaluations } = useSubjectGroup();
 
     // Derived values from context
@@ -52,6 +54,7 @@ const GradesPage: React.FC = () => {
     // Overlays State
     const [isEvalOverlayOpen, setIsEvalOverlayOpen] = useState(false);
     const [isActivityOverlayOpen, setIsActivityOverlayOpen] = useState(false);
+    const [selectedActivity, setSelectedActivity] = useState<any>(null);
     const [targetEvalIdForActivity, setTargetEvalIdForActivity] = useState<string | null>(null);
 
     const [errorMessage, setErrorMessage] = useState<string>('');
@@ -97,14 +100,20 @@ const GradesPage: React.FC = () => {
     const [editingEvalId, setEditingEvalId] = useState<string | null>(null);
     const [evalMenu, setEvalMenu] = useState<{ x: number; y: number; evalId: string } | null>(null);
 
+    // Activity Context Menu State
+    const [activityMenu, setActivityMenu] = useState<{ x: number; y: number; activityId: string; evalId: string } | null>(null);
+
     // Ref for the table container to detect clicks outside
     const tableContainerRef = useRef<HTMLDivElement>(null);
 
     const [loading, setLoading] = useState(false);
 
-    // Close context menu on click elsewhere
+    // Close context menus on click elsewhere
     useEffect(() => {
-        const handleClick = () => setEvalMenu(null);
+        const handleClick = () => {
+            setEvalMenu(null);
+            setActivityMenu(null);
+        };
         document.addEventListener('click', handleClick);
         return () => document.removeEventListener('click', handleClick);
     }, []);
@@ -133,7 +142,7 @@ const GradesPage: React.FC = () => {
 
     const handleDeleteEvaluation = async () => {
         if (!evalMenu) return;
-        if (!window.confirm("Are you sure you want to delete this evaluation?")) {
+        if (!window.confirm(t('grades.confirmDeleteEvaluation'))) {
             setEvalMenu(null);
             return;
         }
@@ -148,9 +157,50 @@ const GradesPage: React.FC = () => {
             }
         } catch (e) {
             console.error(e);
-            showError("Failed to delete evaluation.");
+            showError(t('grades.failedToDeleteEvaluation'));
         }
         setEvalMenu(null);
+    };
+
+    const handleActivityContextMenu = (e: React.MouseEvent, evalId: string, activityId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setActivityMenu({ x: e.pageX, y: e.pageY, activityId, evalId });
+    };
+
+    const handleEditActivity = () => {
+        if (!activityMenu) return;
+
+        // Find the activity data
+        const activity = activities[activityMenu.evalId]?.find(a => a.id === activityMenu.activityId);
+        if (!activity) return;
+
+        setSelectedActivity(activity);
+        setTargetEvalIdForActivity(activityMenu.evalId);
+        setIsActivityOverlayOpen(true);
+        setActivityMenu(null);
+    };
+
+    const handleDeleteActivity = async () => {
+        if (!activityMenu) return;
+        if (!window.confirm(t('grades.confirmDeleteActivity'))) {
+            setActivityMenu(null);
+            return;
+        }
+
+        try {
+            const { default: api } = await import('../../api/client');
+            await api.delete(`/v1/activities/${activityMenu.activityId}/`);
+
+            // Refetch evaluations to update activity list
+            if (activeMidtermId) {
+                await refetchEvaluations(activeMidtermId);
+            }
+        } catch (e) {
+            console.error(e);
+            showError(t('grades.failedToDeleteActivity'));
+        }
+        setActivityMenu(null);
     };
 
     const handleSaveEvaluation = async (data: { name: string; isFixed: boolean; weight: number }) => {
@@ -220,6 +270,7 @@ const GradesPage: React.FC = () => {
     };
 
     const handleAddActivity = (evalId: string) => {
+        setSelectedActivity(null); // Clear any previous selection
         setTargetEvalIdForActivity(evalId);
         setIsActivityOverlayOpen(true);
     };
@@ -246,12 +297,12 @@ const GradesPage: React.FC = () => {
         if (!data.isExtra) {
             if (data.isFixed) {
                 if (currentFixedWeight + newWeight > 100) {
-                    showError("Total fixed weight cannot exceed 100%.");
+                    showError(t('grades.totalFixedWeightExceeded'));
                     return;
                 }
             } else {
                 if (currentFixedWeight >= 100) {
-                    alert("Warning: Fixed weights sum to 100%. This activity will have 0% weight.");
+                    alert(t('grades.warningFixedWeightFull'));
                 }
             }
         }
@@ -259,18 +310,16 @@ const GradesPage: React.FC = () => {
         try {
             const { default: api } = await import('../../api/client');
 
+            // Parse max_score from scale input (handles: "30", "0/30", "0-30", etc.)
             let maxScore = 10;
-            if (data.scale && data.scale.includes('/')) {
-                maxScore = Number(data.scale.split('/')[1]);
-            } else if (data.scale) {
-                maxScore = Number(data.scale);
+            if (data.scale) {
+                const match = data.scale.match(/(\d+)$/); // Extract last number
+                if (match) {
+                    maxScore = Number(match[1]);
+                }
             }
 
-            // Extra points logic: "Force fixed weight checkbox to be checked".
-            // Overlay handles UI? "If it is, system will force fixed weight..."
-            // Data coming from overlay `data` should have `isFixed: true` if `isExtra: true`.
-
-            await api.post('/v1/activities/', {
+            const payload = {
                 evaluation: targetEvalIdForActivity,
                 name: data.name,
                 description: data.description,
@@ -278,17 +327,27 @@ const GradesPage: React.FC = () => {
                 weight_percentage: data.weight,
                 max_score: maxScore,
                 is_extra_points: data.isExtra
-            });
+            };
+
+            // Check if editing or creating
+            if (selectedActivity) {
+                // Edit existing activity
+                await api.put(`/v1/activities/${selectedActivity.id}/`, payload);
+            } else {
+                // Create new activity
+                await api.post('/v1/activities/', payload);
+            }
 
             setIsActivityOverlayOpen(false);
+            setSelectedActivity(null); // Clear selection
 
-            // Refetch evaluations to show new activity
+            // Refetch evaluations to show changes
             if (activeMidtermId) {
                 await refetchEvaluations(activeMidtermId);
             }
         } catch (error) {
             console.error(error);
-            showError("Failed to save activity.");
+            showError(t('grades.failedToSaveActivity'));
         }
     };
 
@@ -505,16 +564,16 @@ const GradesPage: React.FC = () => {
                     <h1>{groupData?.subjectName || "Loading..."}</h1>
                 </div>
 
-                <div className="grades-group">Grupo {groupData?.groupName || ""}</div>
+                <div className="grades-group">{t('grades.group')} {groupData?.groupName || ""}</div>
             </header>
 
             <div className="grades-content">
                 <div ref={tableContainerRef} className="unified-table-container">
-                    {loading ? <div>Loading...</div> : (
+                    {loading ? <div>{t('common.loading')}</div> : (
                         <table className="unified-table grades-selectable">
                             <thead>
                                 <tr>
-                                    <th rowSpan={2} className="student-col-unified">Nombre del Estudiante</th>
+                                    <th rowSpan={2} className="student-col-unified">{t('grades.studentName')}</th>
                                     {evaluations.map(ev => (
                                         <th key={ev.id}
                                             colSpan={(activities[ev.id]?.length || 0) + 1}
@@ -523,16 +582,16 @@ const GradesPage: React.FC = () => {
                                             onMouseEnter={(e) => handleTooltipEnter(e, 'evaluation', ev)}
                                             onMouseLeave={handleTooltipLeave}
                                             style={{ cursor: 'context-menu' }}
-                                            title="Right-click to edit/delete"
+                                            title={t('grades.rightClickToEditDelete')}
                                         >
                                             {ev.name} ({ev.weightPercentage}%)
                                         </th>
                                     ))}
                                     <th rowSpan={2} className="unified-header-vertical">
-                                        <div className="add-eval-header-btn" onClick={handleAddEvaluation}>+ Evaluación</div>
+                                        <div className="add-eval-header-btn" onClick={handleAddEvaluation}>{t('grades.addEvaluation')}</div>
                                     </th>
                                     <th rowSpan={2} className="unified-header-vertical final-header">
-                                        <div className="vertical-text-wrapper">Final</div>
+                                        <div className="vertical-text-wrapper">{t('grades.final')}</div>
                                     </th>
                                 </tr>
                                 <tr>
@@ -540,8 +599,11 @@ const GradesPage: React.FC = () => {
                                         <React.Fragment key={ev.id}>
                                             {activities[ev.id]?.map((act, actIdx) => (
                                                 <th key={act.id} className="unified-header-vertical"
+                                                    onContextMenu={(e) => handleActivityContextMenu(e, ev.id, act.id)}
                                                     onMouseEnter={(e) => handleTooltipEnter(e, 'activity', { ...act, parentEvalId: ev.id })}
                                                     onMouseLeave={handleTooltipLeave}
+                                                    style={{ cursor: 'context-menu' }}
+                                                    title={t('grades.rightClickToDelete')}
                                                 >
                                                     <div className="vertical-text-wrapper">{act.name}</div>
                                                 </th>
@@ -579,6 +641,9 @@ const GradesPage: React.FC = () => {
                                                                     <input
                                                                         type="number"
                                                                         className="unified-input"
+                                                                        min="0"
+                                                                        max={act.maxScore || 10}
+                                                                        step="0.01"
                                                                         ref={(input) => {
                                                                             if (input && editingCell === `${student.id}-${act.id}` && document.activeElement !== input) {
                                                                                 input.focus();
@@ -592,6 +657,16 @@ const GradesPage: React.FC = () => {
                                                                         onChange={(e) => {
                                                                             const newValue = e.target.value;
                                                                             setEditingValue(newValue);
+
+                                                                            // Validate range
+                                                                            const numVal = parseFloat(newValue);
+                                                                            const maxAllowed = act.maxScore || 10;
+                                                                            if (!isNaN(numVal) && numVal > maxAllowed) {
+                                                                                showError(t('grades.maxValueError', { max: maxAllowed }));
+                                                                            }
+                                                                            if (!isNaN(numVal) && numVal < 0) {
+                                                                                showError(t('grades.minValueError'));
+                                                                            }
                                                                             // Note: Live update removed - gradesMap is now read-only from context
                                                                             // Actual save happens in handleGradeChange on blur/enter
                                                                         }}
@@ -653,13 +728,13 @@ const GradesPage: React.FC = () => {
                 <div className="midterm-tabs-footer">
                     {midterms.map(midterm => (
                         <div key={midterm.id} className={`midterm-tab-footer ${activeMidtermId === midterm.id ? 'active' : ''}`} onClick={() => setActiveMidtermId(midterm.id)}>
-                            {midterm.name}
+                            {midterm.name.replace(/Parcial/i, t('midterm.midterm'))}
                         </div>
                     ))}
                 </div>
                 <footer className="unified-footer">
-                    <button className="footer-btn-unified" onClick={() => navigate(`/attendance/${subjectId}/${groupId}`)}>Asistencia</button>
-                    <button className="footer-btn-unified active">Calificaciones</button>
+                    <button className="footer-btn-unified" onClick={() => navigate(`/attendance/${subjectId}/${groupId}`)}>{t('dashboard.attendance')}</button>
+                    <button className="footer-btn-unified active">{t('dashboard.grades')}</button>
                 </footer>
             </div>
 
@@ -687,21 +762,49 @@ const GradesPage: React.FC = () => {
                         handleEditEvaluation();
                         setEvalMenu(null);
                     }}>
-                        Editar Evaluación
+                        {t('grades.editEvaluation')}
                     </div>
                     <div className="context-menu-item-unified danger" onClick={() => {
                         handleDeleteEvaluation();
                         setEvalMenu(null);
                     }}>
-                        Eliminar Evaluación
+                        {t('grades.deleteEvaluation')}
+                    </div>
+                </div>
+            )}
+
+            {activityMenu && (
+                <div
+                    className="context-menu-unified"
+                    style={{ top: activityMenu.y, left: activityMenu.x }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="context-menu-item-unified" onClick={() => {
+                        handleEditActivity();
+                    }}>
+                        {t('grades.editActivity')}
+                    </div>
+                    <div className="context-menu-item-unified danger" onClick={handleDeleteActivity}>
+                        {t('grades.deleteActivity')}
                     </div>
                 </div>
             )}
 
             <NewActivityOverlay
                 isOpen={isActivityOverlayOpen}
-                onClose={() => setIsActivityOverlayOpen(false)}
+                onClose={() => {
+                    setIsActivityOverlayOpen(false);
+                    setSelectedActivity(null);
+                }}
                 onSave={handleSaveActivity}
+                initialData={selectedActivity ? {
+                    name: selectedActivity.name,
+                    description: selectedActivity.description || '',
+                    isFixed: selectedActivity.isFixed,
+                    weight: selectedActivity.weightPercentage,
+                    scale: selectedActivity.maxScore?.toString() || '10',
+                    isExtra: selectedActivity.isExtra
+                } : undefined}
             />
 
             <ErrorOverlay
@@ -732,14 +835,14 @@ const GradesPage: React.FC = () => {
                     </div>
                     {tooltipData.type === 'evaluation' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#666' }}>
-                            <div><strong>Weight:</strong> {tooltipData.data.weightPercentage}% {tooltipData.data.isFixed ? '(Fixed)' : '(Auto)'}</div>
+                            <div><strong>{t('grades.weight')}:</strong> {tooltipData.data.weightPercentage}% {tooltipData.data.isFixed ? `(${t('grades.fixed')})` : `(${t('grades.automatic')})`}</div>
                         </div>
                     )}
                     {tooltipData.type === 'activity' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#666' }}>
-                            <div><strong>Max Score:</strong> {tooltipData.data.maxScore}</div>
+                            <div><strong>{t('grades.scale')}:</strong> 0-{tooltipData.data.maxScore || 10}</div>
                             <div>
-                                <strong>Weight:</strong> {(() => {
+                                <strong>{t('grades.weight')}:</strong> {(() => {
                                     if (tooltipData.data.isFixed) return tooltipData.data.weightPercentage;
                                     // Calculate effective weight
                                     if (!tooltipData.data.parentEvalId) return '0';
@@ -750,10 +853,10 @@ const GradesPage: React.FC = () => {
                                     const remaining = Math.max(0, 100 - used);
                                     if (auto.length === 0) return 0;
                                     return (remaining / auto.length).toFixed(2);
-                                })()}% {tooltipData.data.isFixed ? '(Fixed)' : '(Auto)'}
+                                })()}% {tooltipData.data.isFixed ? `(${t('grades.fixed')})` : `(${t('grades.automatic')})`}
                             </div>
-                            {tooltipData.data.isExtraPoints && <div style={{ color: '#2e7d32', fontWeight: 600 }}>Extra Points</div>}
-                            {tooltipData.data.description && <div style={{ marginTop: '6px', fontStyle: 'italic', background: '#f9f9f9', padding: '4px', borderRadius: '4px' }}>"{tooltipData.data.description}"</div>}
+                            {tooltipData.data.isExtra && <div style={{ color: '#2e7d32', fontWeight: 600 }}>{t('grades.extraPoints')}</div>}
+                            {tooltipData.data.description && <div style={{ marginTop: '6px', fontStyle: 'italic', background: '#f9f9f9', padding: '4px', borderRadius: '4px' }}>" {tooltipData.data.description}"</div>}
                         </div>
                     )}
                 </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import type { Student } from '../../@types/models';
 import { useSubjectGroup } from '../../contexts/SubjectGroupContext';
 import './AttendancePage.css';
@@ -7,6 +8,7 @@ import './AttendancePage.css';
 const AttendancePage: React.FC = () => {
     const { subjectId, groupId } = useParams<{ subjectId: string; groupId: string }>();
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const {
         data: groupData,
         prefetchAllGroupData,
@@ -101,7 +103,10 @@ const AttendancePage: React.FC = () => {
         return () => document.removeEventListener('click', handleClick);
     }, []);
 
-    const handleHeaderMouseDown = (termId: string, timestamp: string) => {
+    const handleHeaderMouseDown = (e: React.MouseEvent, termId: string, timestamp: string) => {
+        // Ignore right-clicks (button 2) - let context menu handle it without changing selection
+        if (e.button === 2) return;
+
         const key = `${termId}|${timestamp}`;
         setIsSelecting(true);
         setSelectionStart(key);
@@ -138,18 +143,9 @@ const AttendancePage: React.FC = () => {
     const handleContextMenu = (e: React.MouseEvent, type: 'student' | 'date', id: string, termId?: string, date?: string) => {
         e.preventDefault();
 
-        // If right-clicking a date
+        // If right-clicking a date, preserve the existing selection
+        // This allows users to select multiple dates with left-click, then right-click to delete them
         if (type === 'date' && termId && date) {
-            const key = `${termId}|${date}`;
-
-            // If the right-clicked date is part of the selection, keep selection and show context menu
-            if (selectedDates.has(key)) {
-                setContextMenu({ x: e.pageX, y: e.pageY, type, id, termId, date });
-                return;
-            }
-
-            // If not part of selection, clear selection and select just this one
-            setSelectedDates(new Set([key]));
             setContextMenu({ x: e.pageX, y: e.pageY, type, id, termId, date });
             return;
         }
@@ -480,7 +476,7 @@ const AttendancePage: React.FC = () => {
                     </button>
                     <h1>{groupData?.subjectName || "Loading..."}</h1>
                 </div>
-                <div className="attendance-group">Grupo {groupData?.groupName || ""}</div>
+                <div className="attendance-group">{t('attendance.group')} {groupData?.groupName || ""}</div>
             </header>
 
             <div className="attendance-content">
@@ -488,14 +484,14 @@ const AttendancePage: React.FC = () => {
                     <table className="unified-table">
                         <thead>
                             <tr>
-                                <th rowSpan={2} className="student-col-unified">Nombre del Estudiante</th>
+                                <th rowSpan={2} className="student-col-unified">{t('attendance.studentName')}</th>
                                 {terms.map(term => (
                                     <th key={term.id} colSpan={term.dates.length + 1} className="unified-header-main">
-                                        {term.name}
+                                        {term.name.replace(/Parcial/i, t('midterm.midterm'))}
                                     </th>
                                 ))}
                                 <th rowSpan={2} className="unified-header-vertical">
-                                    <div className="vertical-text-wrapper">Inasistencias</div>
+                                    <div className="vertical-text-wrapper">{t('attendance.absences')}</div>
                                 </th>
                             </tr>
                             <tr>
@@ -511,7 +507,7 @@ const AttendancePage: React.FC = () => {
                                                     key={idx}
                                                     className={`unified-header-vertical ${isSelected ? 'selected' : ''}`}
                                                     onContextMenu={(e) => handleContextMenu(e, 'date', `${term.id}-${idx}`, term.id, timestamp)}
-                                                    onMouseDown={() => handleHeaderMouseDown(term.id, timestamp)}
+                                                    onMouseDown={(e) => handleHeaderMouseDown(e, term.id, timestamp)}
                                                     onMouseEnter={() => handleHeaderMouseEnter(term.id, timestamp)}
                                                     style={{
                                                         cursor: 'pointer',
@@ -696,15 +692,15 @@ const AttendancePage: React.FC = () => {
             </div>
 
             <footer className="unified-footer">
-                <button className="footer-btn-unified active">Asistencia</button>
-                <button className="footer-btn-unified" onClick={handleGradesClick}>Calificaciones</button>
+                <button className="footer-btn-unified active">{t('dashboard.attendance')}</button>
+                <button className="footer-btn-unified" onClick={() => navigate(`/grades/${subjectId}/${groupId}`)}>{t('dashboard.grades')}</button>
             </footer>
 
             {/* Edit Date Modal */}
             {editingDate && (
                 <div className="modal-overlay" onClick={handleCancelEditDate}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <h3>Editar Fecha de Asistencia</h3>
+                        <h3>{t('attendance.editDate')}</h3>
                         <p>Selecciona una nueva fecha (solo fechas futuras):</p>
                         <input
                             type="date"
@@ -735,10 +731,10 @@ const AttendancePage: React.FC = () => {
                         {contextMenu.type === 'student' && (
                             <>
                                 <div className="context-menu-item-unified" onClick={() => handleEditStudent(contextMenu.id)}>
-                                    Editar
+                                    {t('attendance.editStudent')}
                                 </div>
                                 <div className="context-menu-item-unified danger" onClick={() => handleDeleteStudent(contextMenu.id)}>
-                                    Eliminar
+                                    {t('attendance.deleteStudent')}
                                 </div>
                             </>
                         )}
@@ -746,15 +742,15 @@ const AttendancePage: React.FC = () => {
                             <>
                                 {selectedDates.size > 1 ? (
                                     <div className="context-menu-item-unified danger" onClick={handleBulkDelete}>
-                                        Eliminar {selectedDates.size} Columnas
+                                        {t('attendance.deleteColumns', { count: selectedDates.size })}
                                     </div>
                                 ) : (
                                     <>
                                         <div className="context-menu-item-unified" onClick={() => handleEditDate(contextMenu.termId!, contextMenu.date!)}>
-                                            Editar Fecha
+                                            {t('common.edit')}
                                         </div>
                                         <div className="context-menu-item-unified danger" onClick={() => handleDeleteDate(contextMenu.termId!, contextMenu.date!)}>
-                                            Eliminar
+                                            {t('common.delete')}
                                         </div>
                                     </>
                                 )}

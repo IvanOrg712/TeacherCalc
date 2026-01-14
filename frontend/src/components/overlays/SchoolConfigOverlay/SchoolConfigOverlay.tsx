@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Modal from '../../common/Modal/Modal';
 import './SchoolConfigOverlay.css';
 
@@ -10,6 +11,7 @@ interface SchoolConfigOverlayProps {
 }
 
 const SchoolConfigOverlay: React.FC<SchoolConfigOverlayProps> = ({ isOpen, onClose, onSave, initialData }) => {
+    const { t } = useTranslation();
     const [name, setName] = useState('');
     const [passingGrade, setPassingGrade] = useState<string>('7');
     const [midtermCount, setMidtermCount] = useState<string>('3');
@@ -49,14 +51,14 @@ const SchoolConfigOverlay: React.FC<SchoolConfigOverlayProps> = ({ isOpen, onClo
                 <input
                     type="text"
                     className="overlay-input"
-                    placeholder="Nombre de la escuela"
+                    placeholder={t('school.name')}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     autoFocus
                 />
 
                 <div className="input-row">
-                    <label>Defina el punto de pase</label>
+                    <label>{t('school.passingGrade')}</label>
                     <input
                         type="number"
                         className="overlay-input-small"
@@ -66,7 +68,7 @@ const SchoolConfigOverlay: React.FC<SchoolConfigOverlayProps> = ({ isOpen, onClo
                 </div>
 
                 <div className="input-row">
-                    <label>Cuantos parciales tiene</label>
+                    <label>{t('school.midtermCount')}</label>
                     <input
                         type="number"
                         className="overlay-input-small"
@@ -76,7 +78,7 @@ const SchoolConfigOverlay: React.FC<SchoolConfigOverlayProps> = ({ isOpen, onClo
                 </div>
 
                 <button className="create-btn" onClick={handleSave}>
-                    {initialData ? 'Guardar Cambios' : 'Crear Escuela'}
+                    {initialData ? t('common.save') : t('school.createSchool')}
                 </button>
             </div>
         </Modal>

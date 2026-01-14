@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import DashboardLayout from '../../components/layout/DashboardLayout/DashboardLayout';
 import SchoolSection from '../../components/features/SchoolSection/SchoolSection';
 import SchoolConfigOverlay from '../../components/overlays/SchoolConfigOverlay/SchoolConfigOverlay';
@@ -11,6 +12,7 @@ import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const { prefetchAllGroupData } = useSubjectGroup();
 
     const [schools, setSchools] = useState<any[]>([]); // Start empty, fetch from API
@@ -52,7 +54,7 @@ const Dashboard: React.FC = () => {
             setSchools(mappedSchools);
         } catch (error) {
             console.error("Error fetching schools:", error);
-            showError("Error fetching schools. Please try again.");
+            showError(t('dashboard.errorFetchingSchools'));
         }
     };
 
@@ -122,7 +124,7 @@ const Dashboard: React.FC = () => {
             setIsSchoolOverlayOpen(false);
         } catch (error) {
             console.error("Error saving school:", error);
-            showError("Failed to save school.");
+            showError(t('dashboard.errorSavingSchool'));
         }
     };
 
@@ -214,17 +216,25 @@ const Dashboard: React.FC = () => {
             setSelectedSubject(null);
         } catch (error) {
             console.error("Error saving subject:", error);
-            showError("Failed to save subject.");
+            showError(t('dashboard.errorSavingSubject'));
         }
     };
 
-    const handleDeleteSubject = async (subjectId: string) => {
+    const handleDeleteSubject = async () => {
+        if (!contextMenu) return;
+        if (!window.confirm(t('dashboard.confirmDeleteSubject'))) {
+            return;
+        }
+
+        const subjectIdToDelete = contextMenu.subject.id;
+
         try {
             const { default: api } = await import('../../api/client');
-            await api.delete(`/v1/subjects/${subjectId}/`);
+            await api.delete(`/v1/subjects/${subjectIdToDelete}/`);
             setIsSubjectOverlayOpen(false);
             setSelectedSubject(null);
             fetchSchools(); // Refresh list
+            setContextMenu(null); // Close context menu after deletion
         } catch (error) {
             console.error("Error deleting subject:", error);
             showError("Failed to delete subject.");
@@ -255,7 +265,7 @@ const Dashboard: React.FC = () => {
                 ))}
 
                 <button className="add-school-btn" onClick={handleAddSchool}>
-                    + Escuela
+                    {t('dashboard.addSchool')}
                 </button>
 
                 <SchoolConfigOverlay
@@ -288,16 +298,15 @@ const Dashboard: React.FC = () => {
                         onClose={() => setContextMenu(null)}
                         options={[
                             {
-                                label: 'Editar Materia',
-                                onClick: () => handleEditSubject(contextMenu.subject, contextMenu.schoolId)
+                                label: t('dashboard.editSubject'),
+                                onClick: () => {
+                                    handleEditSubject(contextMenu.subject, contextMenu.schoolId);
+                                    setContextMenu(null);
+                                }
                             },
                             {
-                                label: 'Eliminar Materia',
-                                onClick: () => {
-                                    if (contextMenu.subject.id) {
-                                        handleDeleteSubject(contextMenu.subject.id);
-                                    }
-                                },
+                                label: t('dashboard.deleteSubject'),
+                                onClick: handleDeleteSubject,
                                 danger: true
                             }
                         ]}
