@@ -1,15 +1,41 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { Student, Midterm, Evaluation, Activity, GradingConfig } from '../../@types/models';
+import type { GradingConfig, Activity, Evaluation } from '../../@types/models';
 import { useTableSelection } from '../../hooks/useTableSelection';
-import { calculateAllStats } from '../../utils/statsUtils';
-import SelectionStatsOverlay from '../../components/features/SelectionStatsOverlay/SelectionStatsOverlay';
 import NewEvaluationOverlay from '../../components/overlays/NewEvaluationOverlay/NewEvaluationOverlay';
 import NewActivityOverlay from '../../components/overlays/NewActivityOverlay/NewActivityOverlay';
 import ErrorOverlay from '../../components/overlays/ErrorOverlay/ErrorOverlay';
 import { useSubjectGroup } from '../../contexts/SubjectGroupContext';
 import './GradesPage.css';
+
+// Types for tooltip and activity data
+interface ActivityData {
+    id: string;
+    name: string;
+    description?: string;
+    isFixed: boolean;
+    isExtra: boolean;
+    weightPercentage: number;
+    maxScore: number;
+    parentEvalId?: string;
+}
+
+interface TooltipData {
+    type: 'evaluation' | 'activity';
+    data: Evaluation | ActivityData;
+    x: number;
+    y: number;
+}
+
+interface SaveActivityData {
+    name: string;
+    description?: string;
+    isFixed: boolean;
+    isExtra: boolean;
+    weight: number;
+    scale?: string;
+}
 
 const GradesPage: React.FC = () => {
     const { subjectId, groupId } = useParams<{ subjectId: string; groupId: string }>();
@@ -17,18 +43,24 @@ const GradesPage: React.FC = () => {
     const { t } = useTranslation();
     const { data: groupData, prefetchAllGroupData, updateGrade, deleteGrade, refetchEvaluations } = useSubjectGroup();
 
-    // Derived values from context
-    const students = groupData?.students || [];
-    const midterms = groupData?.midterms || [];
+    // Derived values from context - wrapped in useMemo to stabilize references
+    const students = useMemo(() => groupData?.students || [], [groupData?.students]);
+    const midterms = useMemo(() => groupData?.midterms || [], [groupData?.midterms]);
 
     const [activeMidtermId, setActiveMidtermId] = useState<string | null>(null);
 
-    // Get evaluations and activities for active midterm from context
-    const evaluations = groupData?.evaluationsByMidterm[activeMidtermId || '']?.evaluations || [];
-    const activities = groupData?.evaluationsByMidterm[activeMidtermId || '']?.activities || {};
-    const gradesMap = groupData?.gradesMap || {};
+    // Get evaluations and activities for active midterm from context - wrapped in useMemo
+    const evaluations = useMemo(() =>
+        groupData?.evaluationsByMidterm[activeMidtermId || '']?.evaluations || [],
+        [groupData?.evaluationsByMidterm, activeMidtermId]
+    );
+    const activities = useMemo(() =>
+        groupData?.evaluationsByMidterm[activeMidtermId || '']?.activities || {},
+        [groupData?.evaluationsByMidterm, activeMidtermId]
+    );
+    const gradesMap = useMemo(() => groupData?.gradesMap || {}, [groupData?.gradesMap]);
 
-    const [gradingConfig, setGradingConfig] = useState<GradingConfig>({
+    const [gradingConfig] = useState<GradingConfig>({
         passingGrade: 6,
         maxGrade: 10,
         gradeScale: 'numeric'
@@ -54,7 +86,7 @@ const GradesPage: React.FC = () => {
     // Overlays State
     const [isEvalOverlayOpen, setIsEvalOverlayOpen] = useState(false);
     const [isActivityOverlayOpen, setIsActivityOverlayOpen] = useState(false);
-    const [selectedActivity, setSelectedActivity] = useState<any>(null);
+    const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
     const [targetEvalIdForActivity, setTargetEvalIdForActivity] = useState<string | null>(null);
 
     const [errorMessage, setErrorMessage] = useState<string>('');
@@ -70,16 +102,11 @@ const GradesPage: React.FC = () => {
     const [editingValue, setEditingValue] = useState<string>('');
 
     // Tooltip State
-    const [tooltipData, setTooltipData] = useState<{
-        type: 'evaluation' | 'activity';
-        data: any;
-        x: number;
-        y: number
-    } | null>(null);
+    const [tooltipData, setTooltipData] = useState<TooltipData | null>(null);
     const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const navigationRef = useRef(false);
 
-    const handleTooltipEnter = (e: React.MouseEvent, type: 'evaluation' | 'activity', data: any) => {
+    const handleTooltipEnter = (e: React.MouseEvent, type: 'evaluation' | 'activity', data: Evaluation | ActivityData) => {
         if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         // Position centered below
@@ -106,7 +133,7 @@ const GradesPage: React.FC = () => {
     // Ref for the table container to detect clicks outside
     const tableContainerRef = useRef<HTMLDivElement>(null);
 
-    const [loading, setLoading] = useState(false);
+    const [loading] = useState(false);
 
     // Close context menus on click elsewhere
     useEffect(() => {
@@ -208,11 +235,9 @@ const GradesPage: React.FC = () => {
 
         // Validation: Check total fixed weight
         let currentFixedWeight = 0;
-        let currentTotalWeight = 0;
         evaluations.forEach(ev => {
             if (editingEvalId && ev.id === editingEvalId) return;
             if (ev.isFixed) currentFixedWeight += ev.weightPercentage;
-            currentTotalWeight += ev.weightPercentage;
         });
 
         // 1. Check if sum of fixed weights > 100
@@ -275,7 +300,7 @@ const GradesPage: React.FC = () => {
         setIsActivityOverlayOpen(true);
     };
 
-    const handleSaveActivity = async (data: any) => {
+    const handleSaveActivity = async (data: SaveActivityData) => {
         if (!targetEvalIdForActivity) return;
 
         // Weight Validation Logic
@@ -375,8 +400,7 @@ const GradesPage: React.FC = () => {
 
     const totalCols = columnStructure.length;
     const [selectionMode, setSelectionMode] = useState<'activity' | 'final' | null>(null);
-    const [pendingSelection, setPendingSelection] = useState<any>(null);
-    const finalColIndex = useMemo(() => columnStructure.findIndex(col => col.type === 'final'), [columnStructure]);
+    const [, setPendingSelection] = useState<{ type: string; row: number; col: number; shiftKey: boolean } | null>(null);
 
     // Selectable Logic
     const isSelectable = useCallback((_row: number, col: number): boolean => {
@@ -387,8 +411,8 @@ const GradesPage: React.FC = () => {
         return colInfo.type === selectionMode;
     }, [columnStructure, selectionMode]);
 
-    const { selectedCells, handleCellMouseDown, handleCellMouseEnter, handleMouseUp,
-        handleRowSelect, handleColumnSelect, clearSelection, isSelected
+    const { handleCellMouseDown, handleCellMouseEnter, handleMouseUp,
+        clearSelection, isSelected
     } = useTableSelection({ totalRows: students.length, totalCols, isSelectable });
 
     // Handle grade change (save to API)
@@ -464,10 +488,9 @@ const GradesPage: React.FC = () => {
                 // Result is contribution to grade (0-100 scale within evaluation)
 
                 let totalContribution = 0; // Sum of (grade/max * weight)
-                let totalWeightProcessed = 0;
 
                 // Helper to process activity
-                const processActivity = (act: any, weight: number) => {
+                const processActivity = (act: { id: string; maxScore: number; isExtra: boolean }, weight: number) => {
                     const gradeData = gradesMap[student.id]?.[act.id];
                     if (gradeData) {
                         const scoreRatio = gradeData.score / act.maxScore; // 0 to 1
@@ -476,10 +499,6 @@ const GradesPage: React.FC = () => {
                         totalContribution += scoreRatio * weight;
                     }
                     // If no grade, contribution is 0 (assumed 0 or missing)
-                    // Logic: "Final grade will be sum of products..."
-                    if (!act.isExtra) {
-                        totalWeightProcessed += weight;
-                    }
                 };
 
                 // Process Fixed (Normal)
@@ -595,9 +614,9 @@ const GradesPage: React.FC = () => {
                                     </th>
                                 </tr>
                                 <tr>
-                                    {evaluations.map((ev, evIdx) => (
+                                    {evaluations.map((ev) => (
                                         <React.Fragment key={ev.id}>
-                                            {activities[ev.id]?.map((act, actIdx) => (
+                                            {activities[ev.id]?.map((act) => (
                                                 <th key={act.id} className="unified-header-vertical"
                                                     onContextMenu={(e) => handleActivityContextMenu(e, ev.id, act.id)}
                                                     onMouseEnter={(e) => handleTooltipEnter(e, 'activity', { ...act, parentEvalId: ev.id })}
@@ -838,27 +857,30 @@ const GradesPage: React.FC = () => {
                             <div><strong>{t('grades.weight')}:</strong> {tooltipData.data.weightPercentage}% {tooltipData.data.isFixed ? `(${t('grades.fixed')})` : `(${t('grades.automatic')})`}</div>
                         </div>
                     )}
-                    {tooltipData.type === 'activity' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#666' }}>
-                            <div><strong>{t('grades.scale')}:</strong> 0-{tooltipData.data.maxScore || 10}</div>
-                            <div>
-                                <strong>{t('grades.weight')}:</strong> {(() => {
-                                    if (tooltipData.data.isFixed) return tooltipData.data.weightPercentage;
-                                    // Calculate effective weight
-                                    if (!tooltipData.data.parentEvalId) return '0';
-                                    const siblings = activities[tooltipData.data.parentEvalId] || [];
-                                    const fixed = siblings.filter(a => a.isFixed);
-                                    const auto = siblings.filter(a => !a.isFixed);
-                                    const used = fixed.reduce((sum, a) => sum + (a.weightPercentage || 0), 0);
-                                    const remaining = Math.max(0, 100 - used);
-                                    if (auto.length === 0) return 0;
-                                    return (remaining / auto.length).toFixed(2);
-                                })()}% {tooltipData.data.isFixed ? `(${t('grades.fixed')})` : `(${t('grades.automatic')})`}
+                    {tooltipData.type === 'activity' && (() => {
+                        const actData = tooltipData.data as ActivityData;
+                        return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#666' }}>
+                                <div><strong>{t('grades.scale')}:</strong> 0-{actData.maxScore || 10}</div>
+                                <div>
+                                    <strong>{t('grades.weight')}:</strong> {(() => {
+                                        if (actData.isFixed) return actData.weightPercentage;
+                                        // Calculate effective weight
+                                        if (!actData.parentEvalId) return '0';
+                                        const siblings = activities[actData.parentEvalId] || [];
+                                        const fixed = siblings.filter(a => a.isFixed);
+                                        const auto = siblings.filter(a => !a.isFixed);
+                                        const used = fixed.reduce((sum, a) => sum + (a.weightPercentage || 0), 0);
+                                        const remaining = Math.max(0, 100 - used);
+                                        if (auto.length === 0) return 0;
+                                        return (remaining / auto.length).toFixed(2);
+                                    })()}% {actData.isFixed ? `(${t('grades.fixed')})` : `(${t('grades.automatic')})`}
+                                </div>
+                                {actData.isExtra && <div style={{ color: '#2e7d32', fontWeight: 600 }}>{t('grades.extraPoints')}</div>}
+                                {actData.description && <div style={{ marginTop: '6px', fontStyle: 'italic', background: '#f9f9f9', padding: '4px', borderRadius: '4px' }}>" {actData.description}"</div>}
                             </div>
-                            {tooltipData.data.isExtra && <div style={{ color: '#2e7d32', fontWeight: 600 }}>{t('grades.extraPoints')}</div>}
-                            {tooltipData.data.description && <div style={{ marginTop: '6px', fontStyle: 'italic', background: '#f9f9f9', padding: '4px', borderRadius: '4px' }}>" {tooltipData.data.description}"</div>}
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
             )}
 

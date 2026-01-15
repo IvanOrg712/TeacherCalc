@@ -14,7 +14,8 @@ def send_verification_email(user, verification_token):
     subject = 'Verifica tu cuenta de TeacherCalc'
     
     # Create verification URL
-    verification_url = f"http://localhost:5173/verify-email?token={verification_token}"
+    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+    verification_url = f"{frontend_url}/verify-email?token={verification_token}"
     
     # HTML email content
     html_message = f"""
@@ -67,6 +68,8 @@ def send_welcome_email(user):
     """
     subject = '¡Bienvenido a TeacherCalc! 🎉'
     
+    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+    
     html_message = f"""
     <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -86,7 +89,7 @@ def send_welcome_email(user):
                 </ul>
                 
                 <div style="text-align: center; margin: 40px 0;">
-                    <a href="http://localhost:5173/dashboard" 
+                    <a href="{frontend_url}/dashboard" 
                        style="background-color: #4F46E5; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
                         Ir al Panel de Control
                     </a>

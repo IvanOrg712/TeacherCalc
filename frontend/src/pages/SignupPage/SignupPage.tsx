@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import api from '../../api/client';
 import './SignupPage.css';
 
 const SignupPage = () => {
@@ -14,7 +15,7 @@ const SignupPage = () => {
         lastName: ''
     });
     const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({
@@ -61,35 +62,24 @@ const SignupPage = () => {
             return;
         }
 
-        setLoading(true);
+        setIsLoading(true);
         setError('');
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/auth/register/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: formData.email.toLowerCase().trim(),
-                    password: formData.password,
-                    name: formData.name.trim(),
-                    last_name: formData.lastName.trim()
-                }),
+            const response = await api.post('/auth/register/', {
+                email: formData.email.toLowerCase().trim(),
+                password: formData.password,
+                name: formData.name.trim(),
+                last_name: formData.lastName.trim()
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                alert(data.message || t('auth.registrationSuccess'));
-                navigate('/login');
-            } else {
-                setError(data.error || t('auth.registrationError'));
-            }
-        } catch (err) {
-            setError(t('auth.connectionError'));
+            alert(response.data.message || t('auth.registrationSuccess'));
+            navigate('/login');
+        } catch (err: unknown) {
+            const axiosError = err as { response?: { data?: { error?: string } } };
+            setError(axiosError.response?.data?.error || t('auth.registrationError'));
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
@@ -188,9 +178,9 @@ const SignupPage = () => {
                         <button
                             type="submit"
                             className="signup-button"
-                            disabled={loading}
+                            disabled={isLoading}
                         >
-                            {loading ? t('auth.creatingAccount') : t('auth.createAccountButton')}
+                            {isLoading ? t('auth.creatingAccount') : t('auth.createAccountButton')}
                         </button>
 
                         <div className="login-link">

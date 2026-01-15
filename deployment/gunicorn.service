@@ -1,0 +1,22 @@
+[Unit]
+Description=gunicorn daemon for TeacherCalc
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/TeacherCalc/backend
+Environment="DJANGO_SETTINGS_MODULE=config.settings.prod"
+ExecStart=/home/ubuntu/TeacherCalc/backend/venv/bin/gunicorn \
+    --workers 3 \
+    --bind 0.0.0.0:8000 \
+    --timeout 60 \
+    --access-logfile /var/log/gunicorn/access.log \
+    --error-logfile /var/log/gunicorn/error.log \
+    config.wsgi:application
+
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

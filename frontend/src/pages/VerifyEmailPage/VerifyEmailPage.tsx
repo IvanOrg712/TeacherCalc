@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import api from '../../api/client';
 import './VerifyEmailPage.css';
 
 const VerifyEmailPage = () => {
@@ -21,29 +22,24 @@ const VerifyEmailPage = () => {
             }
 
             try {
-                const response = await fetch(`http://127.0.0.1:8000/api/auth/verify-email/?token=${token}`);
-                const data = await response.json();
+                const response = await api.get(`/auth/verify-email/?token=${token}`);
 
-                if (response.ok) {
-                    setStatus('success');
-                    setMessage(data.message || t('auth.emailVerified'));
+                setStatus('success');
+                setMessage(response.data.message || t('auth.emailVerified'));
 
-                    // Redirect to login after 3 seconds
-                    setTimeout(() => {
-                        navigate('/login');
-                    }, 3000);
-                } else {
-                    setStatus('error');
-                    setMessage(data.error || t('auth.verificationFailedMessage'));
-                }
-            } catch (err) {
+                // Redirect to login after 3 seconds
+                setTimeout(() => {
+                    navigate('/login');
+                }, 3000);
+            } catch (err: unknown) {
                 setStatus('error');
-                setMessage(t('auth.connectionError'));
+                const axiosError = err as { response?: { data?: { error?: string } } };
+                setMessage(axiosError.response?.data?.error || t('auth.verificationFailedMessage'));
             }
         };
 
         verifyEmail();
-    }, [searchParams, navigate]);
+    }, [searchParams, navigate, t]);
 
     return (
         <div className="verify-email-page">

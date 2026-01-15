@@ -25,12 +25,15 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-v2_wz^)d(r&qq41$z&@*iu!#0&4a0sep8sqz6dgw!8lu@)pqiz'
+# Each environment (dev.py, prod.py) should set this from environment variables
+SECRET_KEY = os.getenv('SECRET_KEY', 'INSECURE-development-only-key-CHANGE-IN-PRODUCTION')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Each environment should override this appropriately
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = []
+# Each environment should set ALLOWED_HOSTS
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',') if os.getenv('ALLOWED_HOSTS') else []
 
 
 # Application definition
@@ -156,4 +159,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# Default primary key field type
+# https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# CORS settings - each environment should configure appropriately
+# dev.py: CORS_ALLOW_ALL_ORIGINS = True
+# prod.py: CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS').split(',')

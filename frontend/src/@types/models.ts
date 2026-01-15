@@ -79,6 +79,7 @@ export interface Activity {
     weightPercentage: number;
     isFixed: boolean;
     isExtra: boolean;
+    description?: string;
 }
 
 export interface Grade {
