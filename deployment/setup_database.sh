@@ -18,7 +18,7 @@ ALTER ROLE teachercalc_user SET default_transaction_isolation TO 'read committed
 ALTER ROLE teachercalc_user SET timezone TO 'UTC';
 
 -- Grant privileges
-GRANT ALL PRIVILEGES ON DATABASE teachercalc TO teachercalc_user';
+GRANT ALL PRIVILEGES ON DATABASE teachercalc TO teachercalc_user;
 
 -- For PostgreSQL 15+, grant schema privileges
 \c teachercalc
