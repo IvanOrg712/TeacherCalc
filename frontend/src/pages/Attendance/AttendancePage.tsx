@@ -4,6 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { useSubjectGroup } from '../../contexts/SubjectGroupContext';
 import './AttendancePage.css';
 
+// API response types
+interface AttendanceApiRecord {
+    id: string;
+    student: string;
+    group: string;
+    midterm: string;
+    date: string;
+    status: number | null;
+}
+
 const AttendancePage: React.FC = () => {
     const { subjectId, groupId } = useParams<{ subjectId: string; groupId: string }>();
     const navigate = useNavigate();
@@ -19,14 +29,14 @@ const AttendancePage: React.FC = () => {
     // Note: students, terms, and attendanceData now come from groupData context
     // We no longer need local state for these
 
-    // Derived values from context
-    const students = groupData?.students || [];
-    const terms = groupData?.midterms.map(m => ({
+    // Derived values from context - wrapped in useMemo to stabilize references
+    const students = useMemo(() => groupData?.students || [], [groupData?.students]);
+    const terms = useMemo(() => groupData?.midterms.map(m => ({
         id: m.id,
         name: m.name,
         dates: groupData.attendanceDatesByMidterm[m.id] || []
-    })) || [];
-    const attendanceData = groupData?.attendanceData || {};
+    })) || [], [groupData?.midterms, groupData?.attendanceDatesByMidterm]);
+    const attendanceData = useMemo(() => groupData?.attendanceData || {}, [groupData?.attendanceData]);
 
     // Trigger prefetch if data not loaded
     useEffect(() => {
@@ -250,7 +260,7 @@ const AttendancePage: React.FC = () => {
             // Filter locally for date match (since filter by date wasn't strictly added to ViewSet but could be added easily)
             // We didn't add ?date= filtering in ViewSet, so we must filter client side or add it.
             // Given the small number of records per student/midterm, client side filter is okay for now.
-            const record = res.data.find((r: any) => r.date === date);
+            const record = res.data.find((r: AttendanceApiRecord) => r.date === date);
 
             if (record) {
                 await api.put(`/v1/attendance/${record.id}/`, {
@@ -357,10 +367,10 @@ const AttendancePage: React.FC = () => {
 
             // Delete all attendance records for this date and midterm
             const attendanceRes = await api.get(`/v1/attendance/?group=${groupId}&midterm=${termId}`);
-            const recordsToDelete = attendanceRes.data.filter((r: any) => r.date === date);
+            const recordsToDelete = attendanceRes.data.filter((r: AttendanceApiRecord) => r.date === date);
 
             await Promise.all(
-                recordsToDelete.map((record: any) =>
+                recordsToDelete.map((record: AttendanceApiRecord) =>
                     api.delete(`/v1/attendance/${record.id}/`)
                 )
             );
@@ -392,9 +402,9 @@ const AttendancePage: React.FC = () => {
             const deletePromises = Object.entries(datesByTerm).map(async ([tId, dates]) => {
                 // Fetch all records for this term
                 const attendanceRes = await api.get(`/v1/attendance/?group=${groupId}&midterm=${tId}`);
-                const recordsToDelete = attendanceRes.data.filter((r: any) => dates.includes(r.date));
+                const recordsToDelete = attendanceRes.data.filter((r: AttendanceApiRecord) => dates.includes(r.date));
 
-                return Promise.all(recordsToDelete.map((record: any) => api.delete(`/v1/attendance/${record.id}/`)));
+                return Promise.all(recordsToDelete.map((record: AttendanceApiRecord) => api.delete(`/v1/attendance/${record.id}/`)));
             });
 
             await Promise.all(deletePromises);
@@ -429,11 +439,11 @@ const AttendancePage: React.FC = () => {
 
             // Get all attendance records for the old date
             const attendanceRes = await api.get(`/v1/attendance/?group=${groupId}&midterm=${termId}`);
-            const recordsToUpdate = attendanceRes.data.filter((r: any) => r.date === oldDate);
+            const recordsToUpdate = attendanceRes.data.filter((r: AttendanceApiRecord) => r.date === oldDate);
 
             // Update each record with the new date
             await Promise.all(
-                recordsToUpdate.map((record: any) =>
+                recordsToUpdate.map((record: AttendanceApiRecord) =>
                     api.put(`/v1/attendance/${record.id}/`, {
                         ...record,
                         date: newDate

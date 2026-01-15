@@ -31,14 +31,15 @@ const VerifyEmailPage = () => {
                 setTimeout(() => {
                     navigate('/login');
                 }, 3000);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 setStatus('error');
-                setMessage(err.response?.data?.error || t('auth.verificationFailedMessage'));
+                const axiosError = err as { response?: { data?: { error?: string } } };
+                setMessage(axiosError.response?.data?.error || t('auth.verificationFailedMessage'));
             }
         };
 
         verifyEmail();
-    }, [searchParams, navigate]);
+    }, [searchParams, navigate, t]);
 
     return (
         <div className="verify-email-page">

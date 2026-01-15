@@ -45,12 +45,15 @@ const LoginPage: React.FC = () => {
 
             // Navigate to Dashboard
             navigate('/dashboard');
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error);
 
+            // Type guard for axios error response
+            const axiosError = error as { response?: { data?: { detail?: string } }; message?: string };
+
             // Check if error is due to unverified email
-            if (error?.response?.data?.detail) {
-                const errorMessage = error.response.data.detail;
+            if (axiosError?.response?.data?.detail) {
+                const errorMessage = axiosError.response.data.detail;
 
                 // Check if it's an email verification error
                 if (errorMessage.includes('verificado') || errorMessage.includes('verifica')) {
@@ -60,8 +63,8 @@ const LoginPage: React.FC = () => {
                     setEmailError(errorMessage);
                     setIsUnverified(false);
                 }
-            } else if (error?.message) {
-                setEmailError(error.message);
+            } else if (axiosError?.message) {
+                setEmailError(axiosError.message);
                 setIsUnverified(false);
             } else {
                 setEmailError(t('auth.loginError'));
@@ -83,7 +86,7 @@ const LoginPage: React.FC = () => {
             const { resendVerification } = await import('../../api/auth');
             await resendVerification(email);
             setResendMessage(t('auth.resendSuccess'));
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error);
             setResendMessage(t('auth.resendError'));
         } finally {

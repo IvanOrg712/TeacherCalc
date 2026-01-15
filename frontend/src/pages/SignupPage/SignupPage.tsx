@@ -75,8 +75,9 @@ const SignupPage = () => {
 
             alert(response.data.message || t('auth.registrationSuccess'));
             navigate('/login');
-        } catch (err: any) {
-            setError(err.response?.data?.error || t('auth.registrationError'));
+        } catch (err: unknown) {
+            const axiosError = err as { response?: { data?: { error?: string } } };
+            setError(axiosError.response?.data?.error || t('auth.registrationError'));
         } finally {
             setIsLoading(false);
         }
