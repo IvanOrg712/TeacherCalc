@@ -54,7 +54,7 @@ sudo apt install -y python3 python3-pip python3-venv postgresql postgresql-contr
 
 ```bash
 cd /home/ubuntu
-git clone https://github.com/YOUR_USERNAME/TeacherCalc.git
+git clone https://github.com/IvanVivasGar/TeacherCalc.git
 cd TeacherCalc
 ```
 
