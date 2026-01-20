@@ -6,6 +6,7 @@ import { useTableSelection } from '../../hooks/useTableSelection';
 import NewEvaluationOverlay from '../../components/overlays/NewEvaluationOverlay/NewEvaluationOverlay';
 import NewActivityOverlay from '../../components/overlays/NewActivityOverlay/NewActivityOverlay';
 import ErrorOverlay from '../../components/overlays/ErrorOverlay/ErrorOverlay';
+import DismissibleHint from '../../components/common/DismissibleHint/DismissibleHint';
 import { useSubjectGroup } from '../../contexts/SubjectGroupContext';
 import './GradesPage.css';
 
@@ -74,7 +75,8 @@ const GradesPage: React.FC = () => {
         if (!groupData?.isFullyLoaded || groupData.groupId !== groupId) {
             prefetchAllGroupData(subjectId, groupId);
         }
-    }, [subjectId, groupId, groupData, prefetchAllGroupData]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [subjectId, groupId]); // Only re-run when route params change
 
     // Set first midterm as active when midterms load
     useEffect(() => {
@@ -579,7 +581,11 @@ const GradesPage: React.FC = () => {
         }}>
             <header className="grades-header">
                 <div className="header-left">
-                    <button className="back-button" onClick={() => navigate('/dashboard')}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg></button>
+                    <button className="back-button" onClick={() => navigate('/dashboard')}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                    </button>
                     <h1>{groupData?.subjectName || "Loading..."}</h1>
                 </div>
 
@@ -587,6 +593,7 @@ const GradesPage: React.FC = () => {
             </header>
 
             <div className="grades-content">
+                <DismissibleHint hintKey="grades" translationKey="hints.grades" variant="info" />
                 <div ref={tableContainerRef} className="unified-table-container">
                     {loading ? <div>{t('common.loading')}</div> : (
                         <table className="unified-table grades-selectable">

@@ -16,3 +16,109 @@
     height: 80px;
     font-family: inherit;
 }
+
+/* Basic and Advanced Sections Separator */
+.form-section-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.5rem 0;
+    cursor: pointer;
+    padding: 0.5rem 0;
+    user-select: none;
+}
+
+.form-section-divider::before,
+.form-section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: #ddd;
+}
+
+.form-section-divider span {
+    color: #666;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.form-section-divider:hover span {
+    color: #5c6bc0;
+}
+
+.toggle-icon {
+    transition: transform 0.2s ease;
+    font-size: 0.7rem;
+}
+
+.toggle-icon.expanded {
+    transform: rotate(180deg);
+}
+
+/* Advanced Options Section */
+.advanced-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background-color: #fafafa;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+/* Helper Text */
+.helper-text {
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: -0.5rem;
+    padding-left: 0.25rem;
+}
+
+/* Enhanced Checkbox Row */
+.checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+}
+
+.checkbox-row input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    cursor: pointer;
+    accent-color: #5c6bc0;
+}
+
+.checkbox-row label {
+    font-size: 0.95rem;
+    color: #444;
+    cursor: pointer;
+}
+
+.checkbox-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.checkbox-label {
+    font-size: 0.95rem;
+    color: #444;
+    font-weight: 500;
+}
+
+.checkbox-hint {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+/* Bigger, more accessible buttons */
+.create-btn {
+    min-height: 48px;
+    font-size: 1rem;
+    font-weight: 600;
+}

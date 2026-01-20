@@ -1,5 +1,7 @@
-from rest_framework import viewsets, permissions
-from .models import Schools, Subjects, Groups, Students, Midterms, Evaluations, Activities, Grades, Attendance
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from .models import Schools, Subjects, Groups, Students, GroupStudents, Midterms, Evaluations, Activities, Grades, Attendance
 from .serializers import (
     SchoolSerializer, SubjectSerializer, GroupSerializer, MidtermSerializer,
     StudentSerializer, EvaluationSerializer, ActivitySerializer, GradeSerializer,
@@ -29,6 +31,98 @@ class GroupViewSet(viewsets.ModelViewSet):
     serializer_class = GroupSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    @action(detail=True, methods=['post'], url_path='duplicate')
+    def duplicate(self, request, pk=None):
+        """
+        Duplicate a group's structure (midterms, evaluations, activities) to a new group.
+        
+        Request body:
+        - target_subject: ID of the subject to create the new group in
+        - new_name: Name for the new group
+        
+        Does NOT copy students, only the evaluation structure.
+        """
+        source_group = self.get_object()
+        
+        target_subject_id = request.data.get('target_subject')
+        new_name = request.data.get('new_name')
+        
+        if not target_subject_id:
+            return Response(
+                {'error': 'target_subject is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not new_name:
+            return Response(
+                {'error': 'new_name is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            target_subject = Subjects.objects.get(id=target_subject_id)
+        except Subjects.DoesNotExist:
+            return Response(
+                {'error': 'Target subject not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Create the new group
+        new_group = Groups.objects.create(
+            subject=target_subject,
+            name=new_name
+        )
+        
+        # Copy midterms
+        midterm_mapping = {}  # old_id -> new_id
+        for midterm in Midterms.objects.filter(group=source_group):
+            new_midterm = Midterms.objects.create(
+                group=new_group,
+                name=midterm.name
+            )
+            midterm_mapping[midterm.id] = new_midterm.id
+        
+        # Copy evaluations
+        evaluation_mapping = {}  # old_id -> new_id
+        for midterm in Midterms.objects.filter(group=source_group):
+            for evaluation in Evaluations.objects.filter(midterm=midterm):
+                new_midterm_id = midterm_mapping[midterm.id]
+                new_midterm = Midterms.objects.get(id=new_midterm_id)
+                
+                new_evaluation = Evaluations.objects.create(
+                    midterm=new_midterm,
+                    name=evaluation.name,
+                    is_fixed=evaluation.is_fixed,
+                    weight_percentage=evaluation.weight_percentage
+                )
+                evaluation_mapping[evaluation.id] = new_evaluation.id
+        
+        # Copy activities
+        activities_created = 0
+        for old_eval_id, new_eval_id in evaluation_mapping.items():
+            for activity in Activities.objects.filter(evaluation_id=old_eval_id):
+                new_evaluation = Evaluations.objects.get(id=new_eval_id)
+                
+                Activities.objects.create(
+                    evaluation=new_evaluation,
+                    name=activity.name,
+                    description=activity.description,
+                    is_fixed=activity.is_fixed,
+                    weight_percentage=activity.weight_percentage,
+                    max_score=activity.max_score,
+                    is_extra_points=activity.is_extra_points
+                )
+                activities_created += 1
+        
+        return Response({
+            'success': True,
+            'new_group_id': new_group.id,
+            'new_group_name': new_group.name,
+            'midterms_copied': len(midterm_mapping),
+            'evaluations_copied': len(evaluation_mapping),
+            'activities_copied': activities_created
+        }, status=status.HTTP_201_CREATED)
+
 
 class MidtermViewSet(viewsets.ModelViewSet):
     queryset = Midterms.objects.all()
@@ -54,6 +148,101 @@ class StudentViewSet(viewsets.ModelViewSet):
         if group_id:
             queryset = queryset.filter(groupstudents__group_id=group_id)
         return queryset
+
+    @action(detail=False, methods=['post'], url_path='import-csv')
+    def import_csv(self, request):
+        """
+        Import students from a CSV file.
+        Expected CSV format:
+        - First row: Header with columns 'name' (required) and 'student_number' (optional)
+        - Subsequent rows: Student data
+        
+        Query params:
+        - group: ID of the group to add students to (required)
+        """
+        import csv
+        import io
+        
+        group_id = request.query_params.get('group')
+        if not group_id:
+            return Response(
+                {'error': 'group parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            group = Groups.objects.get(id=group_id)
+        except Groups.DoesNotExist:
+            return Response(
+                {'error': 'Group not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        csv_file = request.FILES.get('file')
+        if not csv_file:
+            return Response(
+                {'error': 'No file provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Read and decode CSV
+            decoded_file = csv_file.read().decode('utf-8')
+            io_string = io.StringIO(decoded_file)
+            reader = csv.DictReader(io_string)
+            
+            # Validate headers
+            headers = [h.lower().strip() for h in reader.fieldnames or []]
+            if 'name' not in headers and 'nombre' not in headers:
+                return Response(
+                    {'error': 'CSV must have a "name" or "nombre" column'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            created_students = []
+            errors = []
+            
+            for row_num, row in enumerate(reader, start=2):  # Start at 2 since row 1 is header
+                # Normalize keys to lowercase
+                row_lower = {k.lower().strip(): v.strip() for k, v in row.items() if v}
+                
+                name = row_lower.get('name') or row_lower.get('nombre')
+                student_number = row_lower.get('student_number') or row_lower.get('numero') or row_lower.get('matricula')
+                
+                if not name:
+                    errors.append(f'Row {row_num}: name is required')
+                    continue
+                
+                # Create student
+                student = Students.objects.create(
+                    name=name,
+                    student_number=student_number
+                )
+                
+                # Link to group
+                GroupStudents.objects.create(
+                    group=group,
+                    student=student,
+                    display_order=row_num
+                )
+                
+                created_students.append({
+                    'id': student.id,
+                    'name': student.name,
+                    'student_number': student.student_number
+                })
+            
+            return Response({
+                'created': len(created_students),
+                'students': created_students,
+                'errors': errors
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Error parsing CSV: {str(e)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class EvaluationViewSet(viewsets.ModelViewSet):

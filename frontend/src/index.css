@@ -46,11 +46,37 @@ button {
   cursor: pointer;
   border: none;
   font-family: inherit;
+  min-height: 44px;
+  /* Accessibility: minimum touch target */
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+}
+
+button:focus-visible {
+  outline: 3px solid #5c6bc0;
+  outline-offset: 2px;
 }
 
 a {
   text-decoration: none;
   color: inherit;
+}
+
+/* Global input accessibility */
+input,
+textarea,
+select {
+  font-size: 1rem;
+  /* Prevent iOS zoom on focus */
+  min-height: 44px;
+  /* Accessibility: minimum touch target */
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid #5c6bc0;
+  outline-offset: 2px;
 }
 
 /* Glassmorphism Utility */

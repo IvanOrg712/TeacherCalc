@@ -58,7 +58,15 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=f'TeacherCalc <{config
 # Frontend URL for email links
 FRONTEND_URL = config('FRONTEND_URL')
 
-# Logging
+# Logging - with fallback for containerized environments
+import os
+LOG_DIR = BASE_DIR / 'logs'
+if not os.path.exists(LOG_DIR):
+    try:
+        os.makedirs(LOG_DIR)
+    except OSError:
+        LOG_DIR = None  # Can't create logs dir, use console only
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -69,12 +77,6 @@ LOGGING = {
         },
     },
     'handlers': {
-        'file': {
-            'level': 'ERROR',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR.parent / 'logs' / 'django.log',
-            'formatter': 'verbose',
-        },
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
@@ -83,9 +85,19 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['file', 'console'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': True,
         },
     },
 }
+
+# Add file handler only if log directory is available
+if LOG_DIR:
+    LOGGING['handlers']['file'] = {
+        'level': 'ERROR',
+        'class': 'logging.FileHandler',
+        'filename': LOG_DIR / 'django.log',
+        'formatter': 'verbose',
+    }
+    LOGGING['loggers']['django']['handlers'].append('file')

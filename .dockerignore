@@ -1,0 +1,44 @@
+# Docker environment - ignore these
+postgres_data/
+static_files/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+.eggs/
+*.egg
+venv/
+.venv/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Build outputs (we'll build fresh in container)
+frontend/dist/
+backend/staticfiles/
+
+# Environment files (use docker-compose env instead)
+.env
+.env.local
+.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.sqlite3
+db.sqlite3

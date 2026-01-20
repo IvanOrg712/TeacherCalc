@@ -25,6 +25,7 @@ const NewActivityOverlay: React.FC<NewActivityOverlayProps> = ({ isOpen, onClose
     const [weight, setWeight] = useState('');
     const [scale, setScale] = useState('');
     const [isExtra, setIsExtra] = useState(false);
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     // Populate form when editing
     React.useEffect(() => {
@@ -35,6 +36,10 @@ const NewActivityOverlay: React.FC<NewActivityOverlayProps> = ({ isOpen, onClose
             setWeight(String(initialData.weight));
             setScale(initialData.scale);
             setIsExtra(initialData.isExtra);
+            // Show advanced if any advanced options were set
+            if (initialData.isFixed || initialData.isExtra) {
+                setShowAdvanced(true);
+            }
         } else if (isOpen && !initialData) {
             // Reset form for new activity
             setName('');
@@ -43,6 +48,7 @@ const NewActivityOverlay: React.FC<NewActivityOverlayProps> = ({ isOpen, onClose
             setWeight('');
             setScale('');
             setIsExtra(false);
+            setShowAdvanced(false);
         }
     }, [isOpen, initialData]);
 
@@ -68,6 +74,7 @@ const NewActivityOverlay: React.FC<NewActivityOverlayProps> = ({ isOpen, onClose
     return (
         <Modal isOpen={isOpen} onClose={onClose}>
             <div className="activity-form">
+                {/* Basic Fields */}
                 <input
                     type="text"
                     className="overlay-input"
@@ -83,26 +90,6 @@ const NewActivityOverlay: React.FC<NewActivityOverlayProps> = ({ isOpen, onClose
                     onChange={(e) => setDescription(e.target.value)}
                 />
 
-                <div className="checkbox-row">
-                    <input
-                        type="checkbox"
-                        checked={isFixed}
-                        onChange={(e) => setIsFixed(e.target.checked)}
-                        disabled={isExtra}
-                    />
-                    <label>{t('activity.hasFixedValue')}</label>
-                </div>
-
-                {isFixed && (
-                    <input
-                        type="number"
-                        className="overlay-input"
-                        placeholder={t('activity.valuePlaceholder')}
-                        value={weight}
-                        onChange={(e) => setWeight(e.target.value)}
-                    />
-                )}
-
                 <input
                     type="text"
                     className="overlay-input"
@@ -110,15 +97,64 @@ const NewActivityOverlay: React.FC<NewActivityOverlayProps> = ({ isOpen, onClose
                     value={scale}
                     onChange={(e) => setScale(e.target.value)}
                 />
+                <span className="helper-text">{t('activity.scaleHint')}</span>
 
-                <div className="checkbox-row">
-                    <input
-                        type="checkbox"
-                        checked={isExtra}
-                        onChange={(e) => handleExtraChange(e.target.checked)}
-                    />
-                    <label>{t('activity.isExtra')}</label>
+                {/* Advanced Options Toggle */}
+                <div
+                    className="form-section-divider"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                >
+                    <span>
+                        {showAdvanced ? t('activity.hideAdvanced') : t('activity.showAdvanced')}
+                        <span className={`toggle-icon ${showAdvanced ? 'expanded' : ''}`}>▼</span>
+                    </span>
                 </div>
+
+                {/* Advanced Options Section */}
+                {showAdvanced && (
+                    <div className="advanced-options">
+                        <div className="checkbox-row">
+                            <input
+                                type="checkbox"
+                                id="fixed-checkbox"
+                                checked={isFixed}
+                                onChange={(e) => setIsFixed(e.target.checked)}
+                                disabled={isExtra}
+                            />
+                            <div className="checkbox-content">
+                                <label htmlFor="fixed-checkbox" className="checkbox-label">
+                                    {t('activity.hasFixedValue')}
+                                </label>
+                                <span className="checkbox-hint">{t('activity.fixedHint')}</span>
+                            </div>
+                        </div>
+
+                        {isFixed && (
+                            <input
+                                type="number"
+                                className="overlay-input"
+                                placeholder={t('activity.valuePlaceholder')}
+                                value={weight}
+                                onChange={(e) => setWeight(e.target.value)}
+                            />
+                        )}
+
+                        <div className="checkbox-row">
+                            <input
+                                type="checkbox"
+                                id="extra-checkbox"
+                                checked={isExtra}
+                                onChange={(e) => handleExtraChange(e.target.checked)}
+                            />
+                            <div className="checkbox-content">
+                                <label htmlFor="extra-checkbox" className="checkbox-label">
+                                    {t('activity.isExtra')}
+                                </label>
+                                <span className="checkbox-hint">{t('activity.extraHint')}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <button className="create-btn" onClick={handleSave}>
                     {t('activity.createActivity')}

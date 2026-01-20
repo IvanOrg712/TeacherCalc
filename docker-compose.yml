@@ -1,0 +1,69 @@
+# TeacherCalc Docker Compose - Simulates AWS EC2 Deployment
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: teachercalc-db
+    environment:
+      POSTGRES_DB: teachercalc
+      POSTGRES_USER: teachercalc_user
+      POSTGRES_PASSWORD: docker_test_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U teachercalc_user -d teachercalc" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Django Backend with Gunicorn
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: teachercalc-backend
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=docker-test-secret-key-not-for-production
+      - ALLOWED_HOSTS=localhost,127.0.0.1,backend,nginx
+      - DATABASE_NAME=teachercalc
+      - DATABASE_USER=teachercalc_user
+      - DATABASE_PASSWORD=docker_test_password
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1
+      - CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1
+      - FRONTEND_URL=http://localhost
+      - EMAIL_HOST_USER=test@test.com
+      - EMAIL_HOST_PASSWORD=test
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - static_files:/app/staticfiles
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn --bind 0.0.0.0:8000 --workers 2 config.wsgi:application"
+
+  # React Frontend + Nginx
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: teachercalc-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    volumes:
+      - static_files:/app/staticfiles:ro
+
+volumes:
+  postgres_data:
+  static_files:

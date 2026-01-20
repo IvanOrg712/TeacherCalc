@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react';
 
 // Type definitions
 interface Student {
@@ -82,12 +82,19 @@ const SubjectGroupContext = createContext<SubjectGroupContextType | undefined>(u
 
 export const SubjectGroupProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [data, setDataState] = useState<GroupData | null>(null);
+    // Use a ref to track current groupId without causing re-renders
+    const currentGroupIdRef = useRef<string | null>(null);
+    const isLoadingRef = useRef(false);
 
     const prefetchAllGroupData = useCallback(async (subjectId: string, groupId: string, force?: boolean) => {
-        // Check if already loaded
-        if (!force && data?.groupId === groupId && data?.isFullyLoaded) {
-            return; // Already have all data
+        // Check if already loaded using ref (avoids dependency on data)
+        if (!force && currentGroupIdRef.current === groupId && !isLoadingRef.current) {
+            return; // Already have all data for this group
         }
+
+        // Prevent duplicate requests
+        if (isLoadingRef.current) return;
+        isLoadingRef.current = true;
 
         setDataState(prev => prev ? { ...prev, isLoading: true, error: null } : null);
 
@@ -192,6 +199,9 @@ export const SubjectGroupProvider: React.FC<{ children: ReactNode }> = ({ childr
                 attendanceDatesArrays[mId] = Array.from(dates).sort();
             });
 
+            // Update ref to track current group
+            currentGroupIdRef.current = groupId;
+
             // Store everything in context
             setDataState({
                 subjectId,
@@ -217,8 +227,10 @@ export const SubjectGroupProvider: React.FC<{ children: ReactNode }> = ({ childr
                 isLoading: false,
                 error: 'Failed to load group data'
             } : null);
+        } finally {
+            isLoadingRef.current = false;
         }
-    }, [data]);
+    }, []); // Empty deps - function is stable, uses refs for checks
 
     // Optimistic update for grade changes
     const updateGrade = useCallback((studentId: string, activityId: string, gradeId: number, score: number) => {
@@ -268,13 +280,28 @@ export const SubjectGroupProvider: React.FC<{ children: ReactNode }> = ({ childr
                 }
             };
 
-            return { ...prev, attendanceData: newAttendanceData };
+            // Also update attendanceDatesByMidterm if this date doesn't exist
+            let newAttendanceDates = prev.attendanceDatesByMidterm;
+            const currentDates = newAttendanceDates[midtermId] || [];
+            if (!currentDates.includes(date)) {
+                newAttendanceDates = {
+                    ...newAttendanceDates,
+                    [midtermId]: [...currentDates, date].sort()
+                };
+            }
+
+            return {
+                ...prev,
+                attendanceData: newAttendanceData,
+                attendanceDatesByMidterm: newAttendanceDates
+            };
         });
     }, []);
 
     // Refetch attendance (for operations like add/delete attendance column)
     const refetchAttendance = useCallback(async (groupId: string) => {
-        if (!data || data.groupId !== groupId) return;
+        // Use ref to check if we have data for this group
+        if (currentGroupIdRef.current !== groupId) return;
 
         try {
             const { default: api } = await import('../api/client');
@@ -311,11 +338,12 @@ export const SubjectGroupProvider: React.FC<{ children: ReactNode }> = ({ childr
         } catch (error) {
             console.error('Error refetching attendance:', error);
         }
-    }, [data]);
+    }, []); // Uses ref, no deps needed
 
     // Refetch students (for complex operations like add/delete student)
     const refetchStudents = useCallback(async (groupId: string) => {
-        if (!data || data.groupId !== groupId) return;
+        // Use ref to check if we have data for this group
+        if (currentGroupIdRef.current !== groupId) return;
 
         try {
             const { default: api } = await import('../api/client');
@@ -331,11 +359,12 @@ export const SubjectGroupProvider: React.FC<{ children: ReactNode }> = ({ childr
         } catch (error) {
             console.error('Error refetching students:', error);
         }
-    }, [data]);
+    }, []); // Uses ref, no deps needed
 
     // Refetch evaluations (for complex operations like add/delete evaluation)
     const refetchEvaluations = useCallback(async (midtermId: string) => {
-        if (!data) return;
+        // Only proceed if we have data loaded
+        if (!currentGroupIdRef.current) return;
 
         try {
             const { default: api } = await import('../api/client');
@@ -372,7 +401,7 @@ export const SubjectGroupProvider: React.FC<{ children: ReactNode }> = ({ childr
         } catch (error) {
             console.error('Error refetching evaluations:', error);
         }
-    }, [data]);
+    }, []); // Uses ref, no deps needed
 
     const clearData = useCallback(() => {
         setDataState(null);

@@ -7,7 +7,7 @@ class Schools(models.Model):
     midterm_count = models.IntegerField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'schools'
 
 
@@ -17,7 +17,7 @@ class Subjects(models.Model):
     absences_allowed = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'subjects'
 
 
@@ -26,27 +26,28 @@ class Groups(models.Model):
     name = models.CharField(max_length=100)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'groups'
 
 
 class Students(models.Model):
     name = models.CharField(max_length=255)
+    student_number = models.CharField(max_length=50, blank=True, null=True)  # Optional student ID/number
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'students'
 
 
 class GroupStudents(models.Model):
-    pk = models.CompositePrimaryKey('group_id', 'student_id')
-    group = models.ForeignKey(Groups, models.DO_NOTHING)
-    student = models.ForeignKey(Students, models.DO_NOTHING)
+    group = models.ForeignKey(Groups, models.CASCADE)
+    student = models.ForeignKey(Students, models.CASCADE)
     display_order = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'group_students'
+        unique_together = (('group', 'student'),)
 
 
 class Midterms(models.Model):
@@ -54,7 +55,7 @@ class Midterms(models.Model):
     name = models.CharField(max_length=100)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'midterms'
 
 
@@ -65,7 +66,7 @@ class Evaluations(models.Model):
     weight_percentage = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'evaluations'
 
 
@@ -79,7 +80,7 @@ class Activities(models.Model):
     is_extra_points = models.BooleanField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'activities'
 
 
@@ -91,7 +92,7 @@ class Attendance(models.Model):
     status = models.SmallIntegerField(null=True, blank=True)  # Allow NULL for empty cells
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'attendance'
         unique_together = (('student', 'group', 'midterm', 'date'),)
 
@@ -102,6 +103,6 @@ class Grades(models.Model):
     score = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'grades'
         unique_together = (('student', 'activity'),)

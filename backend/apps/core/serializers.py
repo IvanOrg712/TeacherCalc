@@ -13,7 +13,7 @@ class StudentSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Students
-        fields = ['id', 'name', 'group']
+        fields = ['id', 'name', 'student_number', 'group']
     
     def create(self, validated_data):
         group_id = validated_data.pop('group', None)

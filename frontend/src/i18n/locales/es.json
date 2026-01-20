@@ -122,7 +122,8 @@
         "deleteColumns": "Eliminar {{count}} Columnas",
         "failedToAddColumn": "Error al agregar columna de asistencia.",
         "failedToUpdateDate": "Error al actualizar la fecha.",
-        "group": "Grupo"
+        "group": "Grupo",
+        "hint": "Ingresa 1 para asistencia o 0 para falta"
     },
     "grades": {
         "title": "Calificaciones",
@@ -165,7 +166,19 @@
         "hasFixedValue": "¿Tiene un valor fijo?",
         "valuePlaceholder": "Valor (%)",
         "scalePlaceholder": "Escala (ej: 0 - 30)",
+        "scaleHint": "Define los puntos máximos (ej: 0-30 significa máximo 30 puntos)",
         "isExtra": "¿Es actividad extra?",
-        "createActivity": "Crear Actividad"
+        "extraHint": "Puntos extra que pueden aumentar la calificación final más allá del 100%",
+        "fixedHint": "Un porcentaje fijo del total de la evaluación",
+        "createActivity": "Crear Actividad",
+        "advancedOptions": "Opciones Avanzadas",
+        "showAdvanced": "Mostrar Opciones Avanzadas",
+        "hideAdvanced": "Ocultar Opciones Avanzadas"
+    },
+    "hints": {
+        "attendance": "Ingresa 1 para asistencia o 0 para falta. Presiona Enter para moverte a la siguiente celda.",
+        "grades": "Ingresa la calificación numérica. El sistema calculará automáticamente los promedios y la calificación final.",
+        "csvImport": "Puedes importar estudiantes desde un archivo CSV con las columnas: nombre, número de matrícula (opcional).",
+        "activity": "Las actividades definen cómo se evalúa cada competencia. Puedes asignar un peso fijo o dejarlo automático."
     }
 }
