@@ -9,6 +9,7 @@ interface SchoolSectionProps {
     onGroupClick?: (subjectId: string, groupId: string) => void;
     onEditSchool?: () => void;
     onSubjectContextMenu?: (event: React.MouseEvent, subject: Subject) => void;
+    onCopyStructure?: (subjectId: string, groupId: string, groupName: string) => void;
 }
 
 const SchoolSection: React.FC<SchoolSectionProps> = ({
@@ -17,7 +18,8 @@ const SchoolSection: React.FC<SchoolSectionProps> = ({
     onAddClass,
     onGroupClick,
     onEditSchool,
-    onSubjectContextMenu
+    onSubjectContextMenu,
+    onCopyStructure
 }) => {
     return (
         <div className="school-section">
@@ -38,6 +40,7 @@ const SchoolSection: React.FC<SchoolSectionProps> = ({
                         sections={subject.groups}
                         onSectionClick={(groupId) => onGroupClick?.(subject.id, groupId)}
                         onCardContextMenu={(e) => onSubjectContextMenu?.(e, subject)}
+                        onCopyStructure={(groupId, groupName) => onCopyStructure?.(subject.id, groupId, groupName)}
                     />
                 ))}
 

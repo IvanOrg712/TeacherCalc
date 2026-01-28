@@ -6,6 +6,7 @@ import SchoolSection from '../../components/features/SchoolSection/SchoolSection
 import SchoolConfigOverlay from '../../components/overlays/SchoolConfigOverlay/SchoolConfigOverlay';
 import SubjectConfigOverlay from '../../components/overlays/SubjectConfigOverlay/SubjectConfigOverlay';
 import ErrorOverlay from '../../components/overlays/ErrorOverlay/ErrorOverlay';
+import DuplicateGroupOverlay from '../../components/overlays/DuplicateGroupOverlay/DuplicateGroupOverlay';
 import ContextMenu from '../../components/common/ContextMenu/ContextMenu';
 import { useSubjectGroup } from '../../contexts/SubjectGroupContext';
 import './Dashboard.css';
@@ -66,6 +67,10 @@ const Dashboard: React.FC = () => {
 
     // Context Menu State
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; subject: DashboardSubject; schoolId: string } | null>(null);
+
+    // Duplicate Group Overlay State
+    const [isDuplicateOverlayOpen, setIsDuplicateOverlayOpen] = useState(false);
+    const [duplicateSourceGroup, setDuplicateSourceGroup] = useState<{ id: string; name: string } | null>(null);
 
     const showError = (msg: string) => {
         setErrorMessage(msg);
@@ -287,6 +292,16 @@ const Dashboard: React.FC = () => {
         navigate(`/attendance/${subjectId}/${groupId}`);
     };
 
+    const handleCopyStructure = (_subjectId: string, groupId: string, groupName: string) => {
+        setDuplicateSourceGroup({ id: groupId, name: groupName });
+        setIsDuplicateOverlayOpen(true);
+    };
+
+    // Flatten all subjects for the duplicate overlay dropdown
+    const allSubjects = schools.flatMap(school =>
+        school.subjects.map(s => ({ id: s.id, name: `${school.name} - ${s.name}` }))
+    );
+
     return (
         <DashboardLayout>
             <div className="dashboard-container">
@@ -299,6 +314,7 @@ const Dashboard: React.FC = () => {
                         onGroupClick={handleGroupClick}
                         onEditSchool={() => handleEditSchool(school)}
                         onSubjectContextMenu={(e, subject) => handleSubjectContextMenu(e, subject, school.id)}
+                        onCopyStructure={handleCopyStructure}
                     />
                 ))}
 
@@ -348,6 +364,22 @@ const Dashboard: React.FC = () => {
                                 danger: true
                             }
                         ]}
+                    />
+                )}
+
+                {duplicateSourceGroup && (
+                    <DuplicateGroupOverlay
+                        isOpen={isDuplicateOverlayOpen}
+                        onClose={() => {
+                            setIsDuplicateOverlayOpen(false);
+                            setDuplicateSourceGroup(null);
+                        }}
+                        onSuccess={() => {
+                            fetchSchools(); // Refresh to show new group
+                        }}
+                        sourceGroupId={duplicateSourceGroup.id}
+                        sourceGroupName={duplicateSourceGroup.name}
+                        subjects={allSubjects}
                     />
                 )}
             </div>

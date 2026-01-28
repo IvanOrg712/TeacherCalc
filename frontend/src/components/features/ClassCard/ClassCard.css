@@ -47,12 +47,44 @@
 
 .section-badge:hover {
     background-color: #ffffff;
-    transform: scale(1.25);
-    /* Much bigger enlarge */
+    transform: scale(1.15);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     z-index: 10;
 }
 
 .section-badge:active {
     transform: scale(0.95);
+}
+
+/* Section item wrapper for badge + copy button */
+.section-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    position: relative;
+}
+
+.copy-structure-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.section-item:hover .copy-structure-btn {
+    opacity: 1;
+}
+
+.copy-structure-btn:hover {
+    background-color: #5c6bc0;
+    color: white;
 }

@@ -180,5 +180,20 @@
         "grades": "Ingresa la calificación numérica. El sistema calculará automáticamente los promedios y la calificación final.",
         "csvImport": "Puedes importar estudiantes desde un archivo CSV con las columnas: nombre, número de matrícula (opcional).",
         "activity": "Las actividades definen cómo se evalúa cada competencia. Puedes asignar un peso fijo o dejarlo automático."
+    },
+    "templates": {
+        "duplicateTitle": "Usar como Plantilla",
+        "copyingFrom": "Copiando estructura de",
+        "targetSubject": "Materia destino",
+        "newGroupName": "Nombre del nuevo grupo",
+        "enterName": "Ingresa el nombre",
+        "duplicate": "Crear Copia",
+        "requiredFields": "Todos los campos son obligatorios",
+        "duplicateFailed": "Error al duplicar el grupo",
+        "successMessage": "Grupo creado exitosamente",
+        "midterms": "parciales",
+        "evaluations": "evaluaciones",
+        "activities": "actividades",
+        "copyStructure": "Copiar estructura"
     }
 }
